@@ -1,0 +1,113 @@
+---
+description: Technical guidelines for the Game Master React app with persistence and full manual override
+globs: []
+alwaysApply: true
+---
+
+# Game Master App Rules
+
+## Purpose
+
+These guidelines steer the AI agent to build a React-based game master interface with three pages: main dashboard, shop 1, and shop 2; persistent storage in a cloud database; and full manual edit capability for all fields.
+
+---
+
+## Pages & Sections
+
+### Main Dashboard
+
+- Must display all players with their avatar, fictional first/last names, health (`current/max`), action points, hunger, thirst, fatigue, and core stats.
+- Include:
+  - A large LED-style announcement board (editable).
+  - Two smaller LED counters below (editable).
+  - Global tokens counter (shared, editable).
+  - Day counter (`Day X`) with edit and "advance day" functions.
+  - Shared inventory listing item names and quantities, fully editable.
+
+### Shops
+
+- Two independent shop pages, initially locked; unlockable independently by the game master.
+- Each shop shows a list of items with name, price, and bundle quantity (if >1).
+- Players must confirm before purchase; on confirmation:
+  - Deduct tokens.
+  - Add item(s) to inventory in correct quantity.
+- Game master can edit shop unlock status, item list, prices, and availability.
+
+---
+
+## Manual Override
+
+- Every value—day, tokens, player stats, hunger/thirst/fatigue, LED texts, inventory, shop status—must be editable at any time.
+- Overrides should bypass constraints or clamps, but changes must be intentional.
+
+---
+
+## Day Progression Logic
+
+- Advancing day should:
+  - Decrease hunger and thirst by 1 for all players, but not below -2.
+  - Reset action points to 2 for all players.
+  - Increment day count.
+- Operators must still be able to manually adjust any field afterward.
+
+---
+
+## Data Persistence
+
+- Use a cloud relational database to store all entities: players, inventory, shops, items, and global app state (day, tokens, LED texts).
+- Application must load initial state from the database on startup.
+- All updates must persist immediately to the database.
+- If connectivity fails:
+  - Keep local state control.
+  - Queue updates for retry when connection restores.
+- Optionally support real-time synchronization for multiple connected clients.
+
+---
+
+## Data Model Outline (Conceptual)
+
+- **Player**: id, name(s), avatar, isDead, hpCurrent, hpMax, actionPoints, hunger, thirst, fatigue, and stats (orientation, strength, resistance, charisma, agility, dexterity, intuition).
+- **Inventory**: item name, quantity.
+- **Shop**: id, unlocked.
+- **ShopItem**: name, price, bundleQuantity, disabled.
+- **AppState**: day, tokens, ledMainText, ledSmallTop, ledSmallBottom.
+
+---
+
+## Behavior Rules
+
+- Health current cannot exceed max; reducing max clamps current.
+- Hunger and thirst range from -2 to +2; fatigue starts at 0 and is unbounded.
+- Action points normally range from 0 to 2, but can exceed if edited.
+- Tokens cannot go negative via regular flow; manual override allowed.
+- Players with zero health are marked dead and their avatar/grayed appearance reflects that, but remain editable.
+
+---
+
+## UI / UX Expectations
+
+- Three distinct views (main, shop 1, shop 2), navigable via UI.
+- Inline editing for all display fields in game master mode.
+- Confirmation modals for critical actions like purchases and day advancement.
+- Editability should be intuitive and responsive.
+
+---
+
+## Resilience
+
+- No data loss on refresh, crashes, or intermittent connectivity.
+- Manual fix must always be possible if business logic fails.
+
+---
+
+## Developer QA Criteria
+
+- All data CRUD operations persist correctly.
+- Day advancement correctly applies automatic stat changes but remains overrideable.
+- Shop purchase flow works with correct token subtraction and inventory addition.
+- Full edit capability for game master across all fields.
+- System can recover from offline mode and sync when online.
+
+---
+
+End of rules.

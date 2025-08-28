@@ -1,0 +1,135 @@
+---
+description: Technical implementation rules for the Game Master React app with Supabase and Tailwind
+globs: []
+alwaysApply: true
+---
+
+# Game Master App Technical Rules
+
+##  Stack & Frameworks
+- Frontend must be built with **React** + **Vite**.
+- Use **TailwindCSS** for styling, including grid layouts, LED-style text, and responsive display.
+- Use **Supabase** as backend (PostgreSQL + auth + real-time).
+- Use **TypeScript** for all components and utilities.
+- State management:
+  - Local state with React hooks (`useState`, `useReducer`).
+  - Global state + server sync with Supabase client and `react-query` or equivalent data fetching layer.
+- Real-time updates:
+  - Use Supabase **realtime channels** for player state, tokens, and inventory.
+
+---
+
+##  Pages
+### Main Dashboard
+- Implement as `/dashboard`.
+- Components:
+  - **PlayerCard**: avatar (toggle grayscale if dead), name, stats, editable fields.
+  - **StatDisplay**: show `current/max` where applicable (HP, action points).
+  - **LEDDisplay**: reusable component for big announcement board + two small counters.
+  - **InventoryList**: editable list with item + quantity, inline edit modal.
+  - **DayController**: displays current day + button to advance day.
+  - **TokenCounter**: global tokens editable counter.
+
+### Shops
+- Routes `/shop1` and `/shop2`.
+- Shop unlocked/locked status must be fetched from Supabase.
+- Components:
+  - **ShopList**: items with price + bundle size.
+  - **PurchaseModal**: confirm purchase, then update tokens and inventory.
+- Deduct tokens and add inventory on Supabase transaction (atomic update).
+
+---
+
+##  Supabase Schema
+- **players**
+  - id (uuid, pk)
+  - first_name (text)
+  - last_name (text)
+  - avatar_url (text, optional)
+  - is_dead (boolean, default false)
+  - hp_current (int)
+  - hp_max (int)
+  - action_points (int)
+  - hunger (int, -2 to 2)
+  - thirst (int, -2 to 2)
+  - fatigue (int)
+  - orientation, strength, resistance, charisma, agility, dexterity, intuition (int)
+- **inventory**
+  - id (uuid, pk)
+  - item_name (text)
+  - quantity (int)
+- **shops**
+  - id (uuid, pk)
+  - unlocked (boolean)
+- **shop_items**
+  - id (uuid, pk)
+  - shop_id (fk → shops.id)
+  - name (text)
+  - price (int)
+  - bundle_quantity (int, default 1)
+- **app_state**
+  - id (uuid, pk)
+  - day (int)
+  - tokens (int)
+  - led_main_text (text)
+  - led_small_top (text)
+  - led_small_bottom (text)
+
+---
+
+##  Business Logic
+- **Health**:
+  - Show as `current/max`.
+  - If `hp_current > hp_max`, clamp to hp_max.
+- **Day progression**:
+  - Button “Next Day”:
+    - Decrement hunger & thirst by 1 (not below -2).
+    - Reset all players’ action points to 2.
+    - Increment day.
+  - Persist to Supabase immediately.
+- **Shops**:
+  - When item purchased:
+    - Confirm modal → subtract tokens → insert/update inventory.
+    - Use Supabase transaction (`rpc` or `row level security` safe function).
+  - Prevent purchase if not enough tokens.
+- **Manual overrides**:
+  - Every displayed value must have an inline edit mode (double click or edit button).
+  - Edits update Supabase instantly.
+
+---
+
+##  UI / UX Implementation
+- Use **Card-based UI** for player display.
+- LED effect:
+  - Tailwind utilities with `font-mono`, `tracking-widest`, custom glowing text.
+- Modal dialogs with accessible focus trap.
+- Toast notifications for confirmation, errors, and success.
+- Navigation via header or bottom nav tabs (Dashboard, Shop 1, Shop 2).
+
+---
+
+##  Data Sync & Offline
+- On load: fetch all entities from Supabase.
+- Use `react-query` caching for offline-first experience.
+- If network unavailable:
+  - Update local state.
+  - Queue updates to Supabase when connection resumes.
+- Realtime subscription:
+  - Subscribe to `players`, `inventory`, `app_state`, `shops`.
+  - Auto-update UI when changes occur server-side.
+
+---
+
+##  Testing / QA
+- Unit tests for components with **Vitest**.
+- Integration tests for Supabase queries.
+- QA checklist:
+  - Player death → avatar grayscale.
+  - Day progression applies correctly.
+  - Purchases fail gracefully on insufficient tokens.
+  - Manual overrides propagate to Supabase.
+  - Refresh → state persists correctly.
+
+---
+
+End of rules.
