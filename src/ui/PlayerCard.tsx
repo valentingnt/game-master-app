@@ -177,7 +177,7 @@ export default function PlayerCard({ player: p }: Props) {
                 update.mutate({
                   id: p.id,
                   field: "hunger",
-                  value: p.hunger + 1,
+                  value: Math.max(-2, Math.min(2, p.hunger + 1)),
                 })
               }
             >
@@ -189,7 +189,7 @@ export default function PlayerCard({ player: p }: Props) {
                 update.mutate({
                   id: p.id,
                   field: "hunger",
-                  value: p.hunger - 1,
+                  value: Math.max(-2, Math.min(2, p.hunger - 1)),
                 })
               }
             >
@@ -216,7 +216,7 @@ export default function PlayerCard({ player: p }: Props) {
                 update.mutate({
                   id: p.id,
                   field: "thirst",
-                  value: p.thirst + 1,
+                  value: Math.max(-2, Math.min(2, p.thirst + 1)),
                 })
               }
             >
@@ -228,7 +228,7 @@ export default function PlayerCard({ player: p }: Props) {
                 update.mutate({
                   id: p.id,
                   field: "thirst",
-                  value: p.thirst - 1,
+                  value: Math.max(-2, Math.min(2, p.thirst - 1)),
                 })
               }
             >

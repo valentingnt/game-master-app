@@ -49,11 +49,14 @@ export default function LEDDisplay({
 
   return (
     <div
-      className={`rounded border border-blue-800/40 bg-blue-900/10 ${base} led-text`}
+      className={`rounded border border-blue-800/40 bg-blue-900/10 ${base} led-text w-full ${
+        editable ? "cursor-text" : ""
+      }`}
+      onDoubleClick={() => editable && setEditing(true)}
     >
       {editing ? (
         <input
-          className="w-full bg-transparent outline-none"
+          className="w-full bg-transparent outline-none min-w-0"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onBlur={() => {
@@ -89,7 +92,7 @@ export default function LEDDisplay({
           autoFocus
         />
       ) : (
-        <div onDoubleClick={() => editable && setEditing(true)}>{value}</div>
+        <div>{value}</div>
       )}
     </div>
   )

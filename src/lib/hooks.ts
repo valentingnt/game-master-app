@@ -450,6 +450,21 @@ export function useDeleteInventoryItem() {
 
 export function useUpdateLEDMain() {
   const qc = useQueryClient()
+  registerHandler("updateLEDMain", async (valAny: unknown) => {
+    const val = valAny as string
+    const { data, error } = await supabase
+      .from("app_state")
+      .select("id")
+      .limit(1)
+      .single()
+    if (error) throw error
+    const id = (data as unknown as { id: string }).id
+    const { error: updErr } = await supabase
+      .from("app_state")
+      .update({ led_main_text: val })
+      .eq("id", id)
+    if (updErr) throw updErr
+  })
   return useMutation({
     mutationFn: async (led_main_text: string) => {
       const cached = qc.getQueryData<AppState>(["app_state"]) as
@@ -479,6 +494,25 @@ export function useUpdateLEDMain() {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
+      const val = _v
+      void enqueue({
+        key: "updateLEDMain",
+        payload: val,
+        run: async () => {
+          const { data, error } = await supabase
+            .from("app_state")
+            .select("id")
+            .limit(1)
+            .single()
+          if (error) throw error
+          const id = (data as unknown as { id: string }).id
+          const { error: updErr } = await supabase
+            .from("app_state")
+            .update({ led_main_text: val })
+            .eq("id", id)
+          if (updErr) throw updErr
+        },
+      })
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
   })
@@ -486,6 +520,21 @@ export function useUpdateLEDMain() {
 
 export function useUpdateLEDSmallTop() {
   const qc = useQueryClient()
+  registerHandler("updateLEDSmallTop", async (valAny: unknown) => {
+    const val = valAny as string
+    const { data, error } = await supabase
+      .from("app_state")
+      .select("id")
+      .limit(1)
+      .single()
+    if (error) throw error
+    const id = (data as unknown as { id: string }).id
+    const { error: updErr } = await supabase
+      .from("app_state")
+      .update({ led_small_top: val })
+      .eq("id", id)
+    if (updErr) throw updErr
+  })
   return useMutation({
     mutationFn: async (led_small_top: string) => {
       const cached = qc.getQueryData<AppState>(["app_state"]) as
@@ -515,6 +564,25 @@ export function useUpdateLEDSmallTop() {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
+      const val = _v
+      void enqueue({
+        key: "updateLEDSmallTop",
+        payload: val,
+        run: async () => {
+          const { data, error } = await supabase
+            .from("app_state")
+            .select("id")
+            .limit(1)
+            .single()
+          if (error) throw error
+          const id = (data as unknown as { id: string }).id
+          const { error: updErr } = await supabase
+            .from("app_state")
+            .update({ led_small_top: val })
+            .eq("id", id)
+          if (updErr) throw updErr
+        },
+      })
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
   })
@@ -522,6 +590,21 @@ export function useUpdateLEDSmallTop() {
 
 export function useUpdateLEDSmallBottom() {
   const qc = useQueryClient()
+  registerHandler("updateLEDSmallBottom", async (valAny: unknown) => {
+    const val = valAny as string
+    const { data, error } = await supabase
+      .from("app_state")
+      .select("id")
+      .limit(1)
+      .single()
+    if (error) throw error
+    const id = (data as unknown as { id: string }).id
+    const { error: updErr } = await supabase
+      .from("app_state")
+      .update({ led_small_bottom: val })
+      .eq("id", id)
+    if (updErr) throw updErr
+  })
   return useMutation({
     mutationFn: async (led_small_bottom: string) => {
       const cached = qc.getQueryData<AppState>(["app_state"]) as
@@ -551,6 +634,25 @@ export function useUpdateLEDSmallBottom() {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
+      const val = _v
+      void enqueue({
+        key: "updateLEDSmallBottom",
+        payload: val,
+        run: async () => {
+          const { data, error } = await supabase
+            .from("app_state")
+            .select("id")
+            .limit(1)
+            .single()
+          if (error) throw error
+          const id = (data as unknown as { id: string }).id
+          const { error: updErr } = await supabase
+            .from("app_state")
+            .update({ led_small_bottom: val })
+            .eq("id", id)
+          if (updErr) throw updErr
+        },
+      })
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
   })
