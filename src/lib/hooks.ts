@@ -3,7 +3,100 @@ import { supabase } from "./supabaseClient"
 import type { AppState, InventoryItem, Player, Shop, ShopItem } from "./types"
 import { enqueue, registerHandler } from "./offlineQueue"
 
-const APP_STATE_ID = "app-state-singleton"
+// Shared helpers
+async function fetchAppStateId(): Promise<string> {
+  const { data, error } = await supabase
+    .from("app_state")
+    .select("id")
+    .limit(1)
+    .single()
+  if (error) throw error
+  return (data as unknown as { id: string }).id
+}
+
+async function updateAppStateField<K extends keyof AppState>(
+  field: K,
+  value: AppState[K]
+) {
+  const id = await fetchAppStateId()
+  const { error } = await supabase
+    .from("app_state")
+    .update({ [field]: value } as any)
+    .eq("id", id)
+  if (error) throw error
+}
+
+async function advanceDayOnServer() {
+  const { data, error } = await supabase
+    .from("app_state")
+    .select("id, day")
+    .limit(1)
+    .single()
+  if (error) throw error
+  const app = data as unknown as { id: string; day: number }
+  const next = (app.day ?? 0) + 1
+  const { error: updErr } = await supabase
+    .from("app_state")
+    .update({ day: next })
+    .eq("id", app.id)
+  if (updErr) throw updErr
+
+  const { data: players, error: pErr } = await supabase
+    .from("players")
+    .select("id, hunger, thirst")
+  if (pErr) throw pErr
+  const updates = (players ?? []).map((pl: any) => ({
+    id: pl.id,
+    action_points: 2,
+    hunger: Math.max(-2, (pl.hunger ?? 0) - 1),
+    thirst: Math.max(-2, (pl.thirst ?? 0) - 1),
+  }))
+  if (updates.length > 0) {
+    const results = await Promise.all(
+      updates.map((u) =>
+        supabase
+          .from("players")
+          .update({
+            action_points: u.action_points,
+            hunger: u.hunger,
+            thirst: u.thirst,
+          })
+          .eq("id", u.id)
+      )
+    )
+    const firstErr = results.find((r) => (r as any).error)?.error
+    if (firstErr) throw firstErr
+  }
+}
+
+export function useUpdateAppStateField<K extends keyof AppState>(field: K) {
+  const qc = useQueryClient()
+  registerHandler("updateAppStateField", async (varsAny: unknown) => {
+    const vars = varsAny as { field: keyof AppState; value: unknown }
+    await updateAppStateField(vars.field as any, vars.value as any)
+  })
+  return useMutation({
+    mutationFn: async (value: AppState[K]) => updateAppStateField(field, value),
+    onMutate: async (value: AppState[K]) => {
+      await qc.cancelQueries({ queryKey: ["app_state"] })
+      const prev = qc.getQueryData<AppState>(["app_state"])!
+      qc.setQueryData<AppState>(["app_state"], {
+        ...prev,
+        [field]: value as any,
+      })
+      return { prev }
+    },
+    onError: async (_e, value, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
+      await enqueue({
+        key: "updateAppStateField",
+        payload: { field, value },
+        run: async () => updateAppStateField(field, value),
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
+  })
+}
 
 export function useAppState() {
   return useQuery({
@@ -22,162 +115,19 @@ export function useAppState() {
 }
 
 export function useUpdateTokens() {
-  const qc = useQueryClient()
-  // Register handler once for persisted queue replay
-  registerHandler("updateTokens", async (tokensAny: unknown) => {
-    const tokens = tokensAny as number
-    const { data, error } = await supabase
-      .from("app_state")
-      .select("id")
-      .limit(1)
-      .single()
-    if (error) throw error
-    const id = (data as unknown as { id: string }).id
-    const { error: updErr } = await supabase
-      .from("app_state")
-      .update({ tokens })
-      .eq("id", id)
-    if (updErr) throw updErr
-  })
-  return useMutation({
-    mutationFn: async (tokens: number) => {
-      const cached = qc.getQueryData<AppState>(["app_state"]) as
-        | AppState
-        | undefined
-      let id = cached?.id
-      if (!id) {
-        const { data, error } = await supabase
-          .from("app_state")
-          .select("id")
-          .limit(1)
-          .single()
-        if (error) throw error
-        id = (data as unknown as { id: string }).id
-      }
-      const { error } = await supabase
-        .from("app_state")
-        .update({ tokens })
-        .eq("id", id!)
-      if (error) throw error
-    },
-    onMutate: async (tokens) => {
-      await qc.cancelQueries({ queryKey: ["app_state"] })
-      const prev = qc.getQueryData<AppState>(["app_state"])!
-      qc.setQueryData<AppState>(["app_state"], { ...prev, tokens })
-      return { prev }
-    },
-    onError: async (_err, tokens, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
-      const cached = qc.getQueryData<AppState>(["app_state"]) as
-        | AppState
-        | undefined
-      await enqueue({
-        key: "updateTokens",
-        payload: tokens,
-        run: async () => {
-          let id = cached?.id
-          if (!id) {
-            const { data, error } = await supabase
-              .from("app_state")
-              .select("id")
-              .limit(1)
-              .single()
-            if (error) throw error
-            id = (data as unknown as { id: string }).id
-          }
-          const { error } = await supabase
-            .from("app_state")
-            .update({ tokens })
-            .eq("id", id!)
-          if (error) throw error
-        },
-      })
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
-  })
+  return useUpdateAppStateField("tokens")
 }
 
 export function useAdvanceDay() {
   const qc = useQueryClient()
   registerHandler("advanceDay", async () => {
-    const { data, error } = await supabase
-      .from("app_state")
-      .select("id, day")
-      .limit(1)
-      .single()
-    if (error) throw error
-    const app = data as unknown as { id: string; day: number }
-    const next = (app.day ?? 0) + 1
-    const { error: updErr } = await supabase
-      .from("app_state")
-      .update({ day: next })
-      .eq("id", app.id)
-    if (updErr) throw updErr
-    const { data: players, error: pErr } = await supabase
-      .from("players")
-      .select("id, hunger, thirst")
-    if (pErr) throw pErr
-    for (const pl of players ?? []) {
-      const { error: e } = await supabase
-        .from("players")
-        .update({
-          action_points: 2,
-          hunger: Math.max(-2, (pl.hunger ?? 0) - 1),
-          thirst: Math.max(-2, (pl.thirst ?? 0) - 1),
-        })
-        .eq("id", (pl as any).id)
-      if (e) throw e
-    }
+    await advanceDayOnServer()
   })
   return useMutation({
-    mutationFn: async () => {
-      // Always read current day from server to avoid double-increment with optimistic cache
-      const { data, error } = await supabase
-        .from("app_state")
-        .select("id, day")
-        .limit(1)
-        .single()
-      if (error) throw error
-      const app = data as unknown as { id: string; day: number }
-      const next = (app.day ?? 0) + 1
-      const { error: updErr } = await supabase
-        .from("app_state")
-        .update({ day: next })
-        .eq("id", app.id)
-      if (updErr) throw updErr
-
-      // Progress players on the server to avoid cache conflicts
-      const { data: players, error: pErr } = await supabase
-        .from("players")
-        .select("id, hunger, thirst")
-      if (pErr) throw pErr
-      const updates = (players ?? []).map((pl: any) => ({
-        id: pl.id,
-        action_points: 2,
-        hunger: Math.max(-2, (pl.hunger ?? 0) - 1),
-        thirst: Math.max(-2, (pl.thirst ?? 0) - 1),
-      }))
-      if (updates.length > 0) {
-        const results = await Promise.all(
-          updates.map((u) =>
-            supabase
-              .from("players")
-              .update({
-                action_points: u.action_points,
-                hunger: u.hunger,
-                thirst: u.thirst,
-              })
-              .eq("id", u.id)
-          )
-        )
-        const firstErr = results.find((r) => (r as any).error)?.error
-        if (firstErr) throw firstErr
-      }
-    },
+    mutationFn: async () => advanceDayOnServer(),
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: ["app_state"] })
       const prevApp = qc.getQueryData<AppState>(["app_state"])!
-      // Optimistically increment day
       qc.setQueryData<AppState>(["app_state"], {
         ...prevApp,
         day: (prevApp?.day ?? 0) + 1,
@@ -187,46 +137,10 @@ export function useAdvanceDay() {
     onError: (_e, _v, ctx) => {
       if (!ctx) return
       if (ctx.prevApp) qc.setQueryData(["app_state"], ctx.prevApp)
-      // Queue the operation to retry when back online
       void enqueue({
         key: "advanceDay",
         payload: {},
-        run: async () => {
-          const { data, error } = await supabase
-            .from("app_state")
-            .select("id, day")
-            .limit(1)
-            .single()
-          if (error) throw error
-          const app = data as unknown as { id: string; day: number }
-          const next = (app.day ?? 0) + 1
-          const { error: updErr } = await supabase
-            .from("app_state")
-            .update({ day: next })
-            .eq("id", app.id)
-          if (updErr) throw updErr
-          const { data: players, error: pErr } = await supabase
-            .from("players")
-            .select("id, hunger, thirst")
-          if (pErr) throw pErr
-          const updates = (players ?? []).map((pl: any) => ({
-            id: pl.id,
-            action_points: 2,
-            hunger: Math.max(-2, (pl.hunger ?? 0) - 1),
-            thirst: Math.max(-2, (pl.thirst ?? 0) - 1),
-          }))
-          for (const u of updates) {
-            const { error: e } = await supabase
-              .from("players")
-              .update({
-                action_points: u.action_points,
-                hunger: u.hunger,
-                thirst: u.thirst,
-              })
-              .eq("id", u.id)
-            if (e) throw e
-          }
-        },
+        run: async () => advanceDayOnServer(),
       })
     },
     onSuccess: () => {
@@ -237,66 +151,7 @@ export function useAdvanceDay() {
 }
 
 export function useUpdateDay() {
-  const qc = useQueryClient()
-  registerHandler("updateDay", async (dayAny: unknown) => {
-    const day = dayAny as number
-    const { data, error } = await supabase
-      .from("app_state")
-      .select("id")
-      .limit(1)
-      .single()
-    if (error) throw error
-    const id = (data as unknown as { id: string }).id
-    const { error: updErr } = await supabase
-      .from("app_state")
-      .update({ day })
-      .eq("id", id)
-    if (updErr) throw updErr
-  })
-  return useMutation({
-    mutationFn: async (day: number) => {
-      const { data, error } = await supabase
-        .from("app_state")
-        .select("id")
-        .limit(1)
-        .single()
-      if (error) throw error
-      const id = (data as unknown as { id: string }).id
-      const { error: updErr } = await supabase
-        .from("app_state")
-        .update({ day })
-        .eq("id", id)
-      if (updErr) throw updErr
-    },
-    onMutate: async (day) => {
-      await qc.cancelQueries({ queryKey: ["app_state"] })
-      const prev = qc.getQueryData<AppState>(["app_state"])!
-      qc.setQueryData<AppState>(["app_state"], { ...prev, day })
-      return { prev }
-    },
-    onError: async (_e, day, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
-      await enqueue({
-        key: "updateDay",
-        payload: day,
-        run: async () => {
-          const { data, error } = await supabase
-            .from("app_state")
-            .select("id")
-            .limit(1)
-            .single()
-          if (error) throw error
-          const id = (data as unknown as { id: string }).id
-          const { error: updErr } = await supabase
-            .from("app_state")
-            .update({ day })
-            .eq("id", id)
-          if (updErr) throw updErr
-        },
-      })
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
-  })
+  return useUpdateAppStateField("day")
 }
 
 export function useInventory() {
@@ -449,213 +304,15 @@ export function useDeleteInventoryItem() {
 }
 
 export function useUpdateLEDMain() {
-  const qc = useQueryClient()
-  registerHandler("updateLEDMain", async (valAny: unknown) => {
-    const val = valAny as string
-    const { data, error } = await supabase
-      .from("app_state")
-      .select("id")
-      .limit(1)
-      .single()
-    if (error) throw error
-    const id = (data as unknown as { id: string }).id
-    const { error: updErr } = await supabase
-      .from("app_state")
-      .update({ led_main_text: val })
-      .eq("id", id)
-    if (updErr) throw updErr
-  })
-  return useMutation({
-    mutationFn: async (led_main_text: string) => {
-      const cached = qc.getQueryData<AppState>(["app_state"]) as
-        | AppState
-        | undefined
-      let id = cached?.id
-      if (!id) {
-        const { data, error } = await supabase
-          .from("app_state")
-          .select("id")
-          .limit(1)
-          .single()
-        if (error) throw error
-        id = (data as unknown as { id: string }).id
-      }
-      const { error } = await supabase
-        .from("app_state")
-        .update({ led_main_text })
-        .eq("id", id!)
-      if (error) throw error
-    },
-    onMutate: async (led_main_text) => {
-      await qc.cancelQueries({ queryKey: ["app_state"] })
-      const prev = qc.getQueryData<AppState>(["app_state"])!
-      qc.setQueryData<AppState>(["app_state"], { ...prev, led_main_text })
-      return { prev }
-    },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
-      const val = _v
-      void enqueue({
-        key: "updateLEDMain",
-        payload: val,
-        run: async () => {
-          const { data, error } = await supabase
-            .from("app_state")
-            .select("id")
-            .limit(1)
-            .single()
-          if (error) throw error
-          const id = (data as unknown as { id: string }).id
-          const { error: updErr } = await supabase
-            .from("app_state")
-            .update({ led_main_text: val })
-            .eq("id", id)
-          if (updErr) throw updErr
-        },
-      })
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
-  })
+  return useUpdateAppStateField("led_main_text")
 }
 
 export function useUpdateLEDSmallTop() {
-  const qc = useQueryClient()
-  registerHandler("updateLEDSmallTop", async (valAny: unknown) => {
-    const val = valAny as string
-    const { data, error } = await supabase
-      .from("app_state")
-      .select("id")
-      .limit(1)
-      .single()
-    if (error) throw error
-    const id = (data as unknown as { id: string }).id
-    const { error: updErr } = await supabase
-      .from("app_state")
-      .update({ led_small_top: val })
-      .eq("id", id)
-    if (updErr) throw updErr
-  })
-  return useMutation({
-    mutationFn: async (led_small_top: string) => {
-      const cached = qc.getQueryData<AppState>(["app_state"]) as
-        | AppState
-        | undefined
-      let id = cached?.id
-      if (!id) {
-        const { data, error } = await supabase
-          .from("app_state")
-          .select("id")
-          .limit(1)
-          .single()
-        if (error) throw error
-        id = (data as unknown as { id: string }).id
-      }
-      const { error } = await supabase
-        .from("app_state")
-        .update({ led_small_top })
-        .eq("id", id!)
-      if (error) throw error
-    },
-    onMutate: async (led_small_top) => {
-      await qc.cancelQueries({ queryKey: ["app_state"] })
-      const prev = qc.getQueryData<AppState>(["app_state"])!
-      qc.setQueryData<AppState>(["app_state"], { ...prev, led_small_top })
-      return { prev }
-    },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
-      const val = _v
-      void enqueue({
-        key: "updateLEDSmallTop",
-        payload: val,
-        run: async () => {
-          const { data, error } = await supabase
-            .from("app_state")
-            .select("id")
-            .limit(1)
-            .single()
-          if (error) throw error
-          const id = (data as unknown as { id: string }).id
-          const { error: updErr } = await supabase
-            .from("app_state")
-            .update({ led_small_top: val })
-            .eq("id", id)
-          if (updErr) throw updErr
-        },
-      })
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
-  })
+  return useUpdateAppStateField("led_small_top")
 }
 
 export function useUpdateLEDSmallBottom() {
-  const qc = useQueryClient()
-  registerHandler("updateLEDSmallBottom", async (valAny: unknown) => {
-    const val = valAny as string
-    const { data, error } = await supabase
-      .from("app_state")
-      .select("id")
-      .limit(1)
-      .single()
-    if (error) throw error
-    const id = (data as unknown as { id: string }).id
-    const { error: updErr } = await supabase
-      .from("app_state")
-      .update({ led_small_bottom: val })
-      .eq("id", id)
-    if (updErr) throw updErr
-  })
-  return useMutation({
-    mutationFn: async (led_small_bottom: string) => {
-      const cached = qc.getQueryData<AppState>(["app_state"]) as
-        | AppState
-        | undefined
-      let id = cached?.id
-      if (!id) {
-        const { data, error } = await supabase
-          .from("app_state")
-          .select("id")
-          .limit(1)
-          .single()
-        if (error) throw error
-        id = (data as unknown as { id: string }).id
-      }
-      const { error } = await supabase
-        .from("app_state")
-        .update({ led_small_bottom })
-        .eq("id", id!)
-      if (error) throw error
-    },
-    onMutate: async (led_small_bottom) => {
-      await qc.cancelQueries({ queryKey: ["app_state"] })
-      const prev = qc.getQueryData<AppState>(["app_state"])!
-      qc.setQueryData<AppState>(["app_state"], { ...prev, led_small_bottom })
-      return { prev }
-    },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
-      const val = _v
-      void enqueue({
-        key: "updateLEDSmallBottom",
-        payload: val,
-        run: async () => {
-          const { data, error } = await supabase
-            .from("app_state")
-            .select("id")
-            .limit(1)
-            .single()
-          if (error) throw error
-          const id = (data as unknown as { id: string }).id
-          const { error: updErr } = await supabase
-            .from("app_state")
-            .update({ led_small_bottom: val })
-            .eq("id", id)
-          if (updErr) throw updErr
-        },
-      })
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
-  })
+  return useUpdateAppStateField("led_small_bottom")
 }
 
 export function usePlayers() {
@@ -784,7 +441,6 @@ export function useToggleShopUnlock() {
       }
     },
     onError: async (_e, vars) => {
-      // Best-effort: invalidate to refetch authoritative state
       qc.invalidateQueries({ queryKey: ["shop"] })
       await enqueue({
         key: "toggleShopUnlock",
@@ -1058,14 +714,12 @@ export function usePurchaseItem() {
       price: number
       bundle_quantity: number
     }) => {
-      // Prefer atomic server-side purchase via RPC; fallback to client steps
       const { error: rpcError } = await supabase.rpc("purchase_item", {
         name,
         price,
         bundle_quantity,
       } as any)
       if (rpcError) {
-        // Fallback implementation (non-atomic)
         const { data: asData, error: asErr } = await supabase
           .from("app_state")
           .select("id, tokens")
@@ -1103,7 +757,6 @@ export function usePurchaseItem() {
       }
     },
     onMutate: async ({ name, price, bundle_quantity }) => {
-      // Optimistically update tokens
       await qc.cancelQueries({ queryKey: ["app_state"] })
       const prevApp = qc.getQueryData<AppState>(["app_state"])!
       const nextTokens = Math.max(0, (prevApp?.tokens ?? 0) - price)
@@ -1112,7 +765,6 @@ export function usePurchaseItem() {
         tokens: nextTokens,
       })
 
-      // Optimistically update inventory
       await qc.cancelQueries({ queryKey: ["inventory"] })
       const prevInv = qc.getQueryData<InventoryItem[]>(["inventory"]) ?? []
       const existing = prevInv.find((i) => i.item_name === name)

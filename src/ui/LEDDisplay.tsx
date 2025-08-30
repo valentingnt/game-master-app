@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react"
-import {
-  useAppState,
-  useUpdateLEDMain,
-  useUpdateLEDSmallTop,
-  useUpdateLEDSmallBottom,
-} from "../lib/hooks"
+import { useAppState, useUpdateAppStateField } from "../lib/hooks"
 import { useToast } from "./Toast"
 
 type Props = {
@@ -23,9 +18,13 @@ export default function LEDDisplay({
   const { data } = useAppState()
   const [value, setValue] = useState(text)
   const [editing, setEditing] = useState(false)
-  const updateMain = useUpdateLEDMain()
-  const updateTop = useUpdateLEDSmallTop()
-  const updateBottom = useUpdateLEDSmallBottom()
+  const field =
+    variant === "main"
+      ? "led_main_text"
+      : variant === "top"
+      ? "led_small_top"
+      : "led_small_bottom"
+  const update = useUpdateAppStateField(field)
   const { show } = useToast()
 
   useEffect(() => {
@@ -61,33 +60,14 @@ export default function LEDDisplay({
           onChange={(e) => setValue(e.target.value)}
           onBlur={() => {
             setEditing(false)
-            if (variant === "main")
-              updateMain.mutate(value, {
-                onSuccess: () => show({ type: "success", message: "Updated" }),
-                onError: () =>
-                  show({
-                    type: "error",
-                    message: "Failed to update (queued if offline)",
-                  }),
-              })
-            else if (variant === "top")
-              updateTop.mutate(value, {
-                onSuccess: () => show({ type: "success", message: "Updated" }),
-                onError: () =>
-                  show({
-                    type: "error",
-                    message: "Failed to update (queued if offline)",
-                  }),
-              })
-            else
-              updateBottom.mutate(value, {
-                onSuccess: () => show({ type: "success", message: "Updated" }),
-                onError: () =>
-                  show({
-                    type: "error",
-                    message: "Failed to update (queued if offline)",
-                  }),
-              })
+            update.mutate(value, {
+              onSuccess: () => show({ type: "success", message: "Updated" }),
+              onError: () =>
+                show({
+                  type: "error",
+                  message: "Failed to update (queued if offline)",
+                }),
+            })
           }}
           autoFocus
         />

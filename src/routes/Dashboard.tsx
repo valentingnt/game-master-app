@@ -3,12 +3,7 @@ import TokenCounter from "../ui/TokenCounter"
 import DayController from "../ui/DayController"
 import InventoryList from "../ui/InventoryList"
 import PlayerCard from "../ui/PlayerCard"
-import {
-  usePlayers,
-  useShop,
-  useToggleShopUnlock,
-  useUpsertShopItem,
-} from "../lib/hooks"
+import { usePlayers, useShop, useToggleShopUnlock } from "../lib/hooks"
 import ShopItemsModal from "../ui/ShopItemsModal"
 import { useState } from "react"
 
@@ -17,7 +12,6 @@ export default function Dashboard() {
   const shop1 = useShop("shop1").data
   const shop2 = useShop("shop2").data
   const toggleUnlock = useToggleShopUnlock()
-  const upsertItem = useUpsertShopItem()
   const [openModal, setOpenModal] = useState<null | "shop1" | "shop2">(null)
   return (
     <>
