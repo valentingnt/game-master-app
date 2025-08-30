@@ -12,6 +12,9 @@ import "./index.css"
 import App from "./routes/App"
 import Dashboard from "./routes/Dashboard"
 import Shop from "./routes/Shop"
+import Player from "./routes/Player"
+import PlayerApp from "./routes/PlayerApp"
+import DashboardApp from "./routes/DashboardApp"
 import { ToastProvider } from "./ui/Toast"
 import { setOnlineState } from "./lib/offlineQueue"
 
@@ -28,11 +31,21 @@ const router = createBrowserRouter([
     path: "/",
     element: <App />,
     children: [
-      { path: "/", element: <Dashboard /> },
-      { path: "/dashboard", element: <Dashboard /> },
+      { path: "/", element: <Shop shopId="shop1" /> },
+      { path: "/shop1", element: <Shop shopId="shop1" /> },
       { path: "/shop1", element: <Shop shopId="shop1" /> },
       { path: "/shop2", element: <Shop shopId="shop2" /> },
     ],
+  },
+  {
+    path: "/dashboard",
+    element: <DashboardApp />,
+    children: [{ path: "", element: <Dashboard /> }],
+  },
+  {
+    path: "/player",
+    element: <PlayerApp />,
+    children: [{ path: ":id", element: <Player /> }],
   },
 ])
 
