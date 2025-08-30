@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
-import { useShop, useUpsertShopItem, useDeleteShopItem } from "../lib/hooks"
+import {
+  useShop,
+  useUpsertShopItem,
+  useDeleteShopItem,
+  useToggleShopItemDisabled,
+} from "../lib/hooks"
+import { useToast } from "./Toast"
 
 type Props = {
   shopSlug: "shop1" | "shop2"
@@ -11,6 +17,7 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
   const { data } = useShop(shopSlug)
   const upsert = useUpsertShopItem()
   const del = useDeleteShopItem()
+  const toggleDisabled = useToggleShopItemDisabled()
   const [name, setName] = useState("")
   const [price, setPrice] = useState<number>(10)
   const [bundle, setBundle] = useState<number>(1)
@@ -30,6 +37,7 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
 
   const shopId = data?.shop?.id
   const items = useMemo(() => data?.items ?? [], [data?.items])
+  const { show } = useToast()
 
   useEffect(() => {
     const next: Record<
@@ -154,6 +162,36 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
                   })
                 }}
               />
+              <label className="col-span-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!!it.disabled}
+                  onChange={(e) =>
+                    shopId &&
+                    toggleDisabled.mutate(
+                      {
+                        id: it.id,
+                        disabled: e.target.checked,
+                        shop_id: shopId,
+                      },
+                      {
+                        onSuccess: () =>
+                          show({
+                            type: "success",
+                            message: "Availability updated",
+                          }),
+                        onError: () =>
+                          show({
+                            type: "error",
+                            message:
+                              "Failed to update availability (queued if offline)",
+                          }),
+                      }
+                    )
+                  }
+                />
+                Disabled
+              </label>
               <button
                 className="col-span-2 px-2 py-1 rounded bg-red-700"
                 onClick={() =>

@@ -5,6 +5,7 @@ import {
   useUpdateLEDSmallTop,
   useUpdateLEDSmallBottom,
 } from "../lib/hooks"
+import { useToast } from "./Toast"
 
 type Props = {
   text: string
@@ -25,6 +26,7 @@ export default function LEDDisplay({
   const updateMain = useUpdateLEDMain()
   const updateTop = useUpdateLEDSmallTop()
   const updateBottom = useUpdateLEDSmallBottom()
+  const { show } = useToast()
 
   useEffect(() => {
     if (!data) return
@@ -56,9 +58,33 @@ export default function LEDDisplay({
           onChange={(e) => setValue(e.target.value)}
           onBlur={() => {
             setEditing(false)
-            if (variant === "main") updateMain.mutate(value)
-            else if (variant === "top") updateTop.mutate(value)
-            else updateBottom.mutate(value)
+            if (variant === "main")
+              updateMain.mutate(value, {
+                onSuccess: () => show({ type: "success", message: "Updated" }),
+                onError: () =>
+                  show({
+                    type: "error",
+                    message: "Failed to update (queued if offline)",
+                  }),
+              })
+            else if (variant === "top")
+              updateTop.mutate(value, {
+                onSuccess: () => show({ type: "success", message: "Updated" }),
+                onError: () =>
+                  show({
+                    type: "error",
+                    message: "Failed to update (queued if offline)",
+                  }),
+              })
+            else
+              updateBottom.mutate(value, {
+                onSuccess: () => show({ type: "success", message: "Updated" }),
+                onError: () =>
+                  show({
+                    type: "error",
+                    message: "Failed to update (queued if offline)",
+                  }),
+              })
           }}
           autoFocus
         />

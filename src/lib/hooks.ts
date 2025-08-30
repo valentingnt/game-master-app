@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "./supabaseClient"
 import type { AppState, InventoryItem, Player, Shop, ShopItem } from "./types"
-import { enqueue } from "./offlineQueue"
+import { enqueue, registerHandler } from "./offlineQueue"
 
 const APP_STATE_ID = "app-state-singleton"
 
@@ -23,6 +23,22 @@ export function useAppState() {
 
 export function useUpdateTokens() {
   const qc = useQueryClient()
+  // Register handler once for persisted queue replay
+  registerHandler("updateTokens", async (tokensAny: unknown) => {
+    const tokens = tokensAny as number
+    const { data, error } = await supabase
+      .from("app_state")
+      .select("id")
+      .limit(1)
+      .single()
+    if (error) throw error
+    const id = (data as unknown as { id: string }).id
+    const { error: updErr } = await supabase
+      .from("app_state")
+      .update({ tokens })
+      .eq("id", id)
+    if (updErr) throw updErr
+  })
   return useMutation({
     mutationFn: async (tokens: number) => {
       const cached = qc.getQueryData<AppState>(["app_state"]) as
@@ -83,6 +99,36 @@ export function useUpdateTokens() {
 
 export function useAdvanceDay() {
   const qc = useQueryClient()
+  registerHandler("advanceDay", async () => {
+    const { data, error } = await supabase
+      .from("app_state")
+      .select("id, day")
+      .limit(1)
+      .single()
+    if (error) throw error
+    const app = data as unknown as { id: string; day: number }
+    const next = (app.day ?? 0) + 1
+    const { error: updErr } = await supabase
+      .from("app_state")
+      .update({ day: next })
+      .eq("id", app.id)
+    if (updErr) throw updErr
+    const { data: players, error: pErr } = await supabase
+      .from("players")
+      .select("id, hunger, thirst")
+    if (pErr) throw pErr
+    for (const pl of players ?? []) {
+      const { error: e } = await supabase
+        .from("players")
+        .update({
+          action_points: 2,
+          hunger: Math.max(-2, (pl.hunger ?? 0) - 1),
+          thirst: Math.max(-2, (pl.thirst ?? 0) - 1),
+        })
+        .eq("id", (pl as any).id)
+      if (e) throw e
+    }
+  })
   return useMutation({
     mutationFn: async () => {
       // Always read current day from server to avoid double-increment with optimistic cache
@@ -141,11 +187,115 @@ export function useAdvanceDay() {
     onError: (_e, _v, ctx) => {
       if (!ctx) return
       if (ctx.prevApp) qc.setQueryData(["app_state"], ctx.prevApp)
+      // Queue the operation to retry when back online
+      void enqueue({
+        key: "advanceDay",
+        payload: {},
+        run: async () => {
+          const { data, error } = await supabase
+            .from("app_state")
+            .select("id, day")
+            .limit(1)
+            .single()
+          if (error) throw error
+          const app = data as unknown as { id: string; day: number }
+          const next = (app.day ?? 0) + 1
+          const { error: updErr } = await supabase
+            .from("app_state")
+            .update({ day: next })
+            .eq("id", app.id)
+          if (updErr) throw updErr
+          const { data: players, error: pErr } = await supabase
+            .from("players")
+            .select("id, hunger, thirst")
+          if (pErr) throw pErr
+          const updates = (players ?? []).map((pl: any) => ({
+            id: pl.id,
+            action_points: 2,
+            hunger: Math.max(-2, (pl.hunger ?? 0) - 1),
+            thirst: Math.max(-2, (pl.thirst ?? 0) - 1),
+          }))
+          for (const u of updates) {
+            const { error: e } = await supabase
+              .from("players")
+              .update({
+                action_points: u.action_points,
+                hunger: u.hunger,
+                thirst: u.thirst,
+              })
+              .eq("id", u.id)
+            if (e) throw e
+          }
+        },
+      })
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["app_state"] })
       qc.invalidateQueries({ queryKey: ["players"] })
     },
+  })
+}
+
+export function useUpdateDay() {
+  const qc = useQueryClient()
+  registerHandler("updateDay", async (dayAny: unknown) => {
+    const day = dayAny as number
+    const { data, error } = await supabase
+      .from("app_state")
+      .select("id")
+      .limit(1)
+      .single()
+    if (error) throw error
+    const id = (data as unknown as { id: string }).id
+    const { error: updErr } = await supabase
+      .from("app_state")
+      .update({ day })
+      .eq("id", id)
+    if (updErr) throw updErr
+  })
+  return useMutation({
+    mutationFn: async (day: number) => {
+      const { data, error } = await supabase
+        .from("app_state")
+        .select("id")
+        .limit(1)
+        .single()
+      if (error) throw error
+      const id = (data as unknown as { id: string }).id
+      const { error: updErr } = await supabase
+        .from("app_state")
+        .update({ day })
+        .eq("id", id)
+      if (updErr) throw updErr
+    },
+    onMutate: async (day) => {
+      await qc.cancelQueries({ queryKey: ["app_state"] })
+      const prev = qc.getQueryData<AppState>(["app_state"])!
+      qc.setQueryData<AppState>(["app_state"], { ...prev, day })
+      return { prev }
+    },
+    onError: async (_e, day, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["app_state"], ctx.prev)
+      await enqueue({
+        key: "updateDay",
+        payload: day,
+        run: async () => {
+          const { data, error } = await supabase
+            .from("app_state")
+            .select("id")
+            .limit(1)
+            .single()
+          if (error) throw error
+          const id = (data as unknown as { id: string }).id
+          const { error: updErr } = await supabase
+            .from("app_state")
+            .update({ day })
+            .eq("id", id)
+          if (updErr) throw updErr
+        },
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["app_state"] }),
   })
 }
 
@@ -166,6 +316,21 @@ export function useInventory() {
 
 export function useUpsertInventoryItem() {
   const qc = useQueryClient()
+  registerHandler("upsertInventory", async (varsAny: unknown) => {
+    const vars = varsAny as { id?: string; item_name: string; quantity: number }
+    if (vars.id) {
+      const { error } = await supabase
+        .from("inventory")
+        .update({ item_name: vars.item_name, quantity: vars.quantity })
+        .eq("id", vars.id)
+      if (error) throw error
+    } else {
+      const { error } = await supabase
+        .from("inventory")
+        .insert({ item_name: vars.item_name, quantity: vars.quantity })
+      if (error) throw error
+    }
+  })
   return useMutation({
     mutationFn: async ({
       id,
@@ -192,28 +357,39 @@ export function useUpsertInventoryItem() {
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: ["inventory"] })
       const prev = qc.getQueryData<InventoryItem[]>(["inventory"]) ?? []
-      let next: InventoryItem[]
+      let next: InventoryItem[] = prev
       if (vars.id) {
         next = prev.map((it) =>
           it.id === vars.id
             ? { ...it, item_name: vars.item_name, quantity: vars.quantity }
             : it
         )
-      } else {
-        next = [
-          ...prev,
-          {
-            id: `optimistic-${Date.now()}`,
-            item_name: vars.item_name,
-            quantity: vars.quantity,
-          },
-        ]
+        qc.setQueryData(["inventory"], next)
       }
-      qc.setQueryData(["inventory"], next)
       return { prev }
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["inventory"], ctx.prev)
+      const vars = _v
+      if (!vars) return
+      void enqueue({
+        key: "upsertInventory",
+        payload: vars,
+        run: async () => {
+          if (vars.id) {
+            const { error } = await supabase
+              .from("inventory")
+              .update({ item_name: vars.item_name, quantity: vars.quantity })
+              .eq("id", vars.id)
+            if (error) throw error
+          } else {
+            const { error } = await supabase
+              .from("inventory")
+              .insert({ item_name: vars.item_name, quantity: vars.quantity })
+            if (error) throw error
+          }
+        },
+      })
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inventory"] })
@@ -223,20 +399,50 @@ export function useUpsertInventoryItem() {
 
 export function useDeleteInventoryItem() {
   const qc = useQueryClient()
+  registerHandler("deleteInventory", async (varsAny: unknown) => {
+    const vars =
+      typeof varsAny === "string"
+        ? { id: varsAny }
+        : (varsAny as { id: string })
+    const { error } = await supabase
+      .from("inventory")
+      .delete()
+      .eq("id", vars.id)
+    if (error) throw error
+  })
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("inventory").delete().eq("id", id)
+    mutationFn: async (vars: { id: string }) => {
+      if (vars.id.startsWith("optimistic-")) return
+      const { error } = await supabase
+        .from("inventory")
+        .delete()
+        .eq("id", vars.id)
       if (error) throw error
     },
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ["inventory"] })
       const prev = qc.getQueryData<InventoryItem[]>(["inventory"]) ?? []
-      const next = prev.filter((it) => it.id !== id)
+      const itemId = (id as any).id ?? (id as any)
+      const next = prev.filter((it) => it.id !== itemId)
       qc.setQueryData(["inventory"], next)
       return { prev }
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["inventory"], ctx.prev)
+      const isOffline =
+        typeof navigator !== "undefined" && (navigator as any).onLine === false
+      if (!isOffline && ctx?.prev) qc.setQueryData(["inventory"], ctx.prev)
+      const id = (typeof _v === "string" ? _v : (_v as any).id) as string
+      void enqueue({
+        key: "deleteInventory",
+        payload: { id },
+        run: async () => {
+          const { error } = await supabase
+            .from("inventory")
+            .delete()
+            .eq("id", id)
+          if (error) throw error
+        },
+      })
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inventory"] }),
   })
@@ -366,6 +572,14 @@ export function usePlayers() {
 
 export function useUpdatePlayerField() {
   const qc = useQueryClient()
+  registerHandler("updatePlayerField", async (varsAny: unknown) => {
+    const vars = varsAny as { id: string; field: keyof Player; value: unknown }
+    const { error } = await supabase
+      .from("players")
+      .update({ [vars.field]: vars.value })
+      .eq("id", vars.id)
+    if (error) throw error
+  })
   return useMutation({
     mutationFn: async ({
       id,
@@ -393,6 +607,18 @@ export function useUpdatePlayerField() {
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(["players"], ctx.prev)
+      const vars = _v
+      void enqueue({
+        key: "updatePlayerField",
+        payload: vars,
+        run: async () => {
+          const { error } = await supabase
+            .from("players")
+            .update({ [vars.field]: vars.value })
+            .eq("id", vars.id)
+          if (error) throw error
+        },
+      })
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["players"] })
@@ -425,6 +651,14 @@ export function useShop(shopId: string) {
 
 export function useToggleShopUnlock() {
   const qc = useQueryClient()
+  registerHandler("toggleShopUnlock", async (varsAny: unknown) => {
+    const vars = varsAny as { id: string; unlocked: boolean }
+    const { error } = await supabase
+      .from("shops")
+      .update({ unlocked: vars.unlocked })
+      .eq("id", vars.id)
+    if (error) throw error
+  })
   return useMutation({
     mutationFn: async ({ id, unlocked }: { id: string; unlocked: boolean }) => {
       const { error } = await supabase
@@ -447,11 +681,50 @@ export function useToggleShopUnlock() {
         }
       }
     },
+    onError: async (_e, vars) => {
+      // Best-effort: invalidate to refetch authoritative state
+      qc.invalidateQueries({ queryKey: ["shop"] })
+      await enqueue({
+        key: "toggleShopUnlock",
+        payload: vars,
+        run: async () => {
+          const { error } = await supabase
+            .from("shops")
+            .update({ unlocked: vars.unlocked })
+            .eq("id", vars.id)
+          if (error) throw error
+        },
+      })
+    },
   })
 }
 
 export function useUpsertShopItem() {
   const qc = useQueryClient()
+  registerHandler("upsertShopItem", async (itemAny: unknown) => {
+    const item = itemAny as Partial<ShopItem> & { shop_id: string }
+    if (item.id) {
+      const { error } = await supabase
+        .from("shop_items")
+        .update({
+          name: item.name,
+          price: item.price,
+          bundle_quantity: item.bundle_quantity,
+          disabled: item.disabled ?? false,
+        })
+        .eq("id", item.id)
+      if (error) throw error
+    } else {
+      const { error } = await supabase.from("shop_items").insert({
+        shop_id: item.shop_id,
+        name: item.name,
+        price: item.price,
+        bundle_quantity: item.bundle_quantity ?? 1,
+        disabled: item.disabled ?? false,
+      })
+      if (error) throw error
+    }
+  })
   return useMutation({
     mutationFn: async (item: Partial<ShopItem> & { shop_id: string }) => {
       if (item.id) {
@@ -515,6 +788,35 @@ export function useUpsertShopItem() {
       if (ctx?.key && ctx?.prev) {
         qc.setQueryData(ctx.key, ctx.prev)
       }
+      const item = _vars
+      if (!item) return
+      void enqueue({
+        key: "upsertShopItem",
+        payload: item,
+        run: async () => {
+          if (item.id) {
+            const { error } = await supabase
+              .from("shop_items")
+              .update({
+                name: item.name,
+                price: item.price,
+                bundle_quantity: item.bundle_quantity,
+                disabled: item.disabled ?? false,
+              })
+              .eq("id", item.id)
+            if (error) throw error
+          } else {
+            const { error } = await supabase.from("shop_items").insert({
+              shop_id: item.shop_id,
+              name: item.name,
+              price: item.price,
+              bundle_quantity: item.bundle_quantity ?? 1,
+              disabled: item.disabled ?? false,
+            })
+            if (error) throw error
+          }
+        },
+      })
     },
     onSuccess: (_v, vars) => {
       qc.invalidateQueries({ queryKey: ["shop", vars.shop_id] })
@@ -524,6 +826,14 @@ export function useUpsertShopItem() {
 
 export function useToggleShopItemDisabled() {
   const qc = useQueryClient()
+  registerHandler("toggleShopItemDisabled", async (varsAny: unknown) => {
+    const vars = varsAny as { id: string; disabled: boolean; shop_id: string }
+    const { error } = await supabase
+      .from("shop_items")
+      .update({ disabled: vars.disabled })
+      .eq("id", vars.id)
+    if (error) throw error
+  })
   return useMutation({
     mutationFn: async ({
       id,
@@ -554,11 +864,33 @@ export function useToggleShopItemDisabled() {
         })
       }
     },
+    onError: async (_e, vars) => {
+      qc.invalidateQueries({ queryKey: ["shop", vars.shop_id] })
+      await enqueue({
+        key: "toggleShopItemDisabled",
+        payload: vars,
+        run: async () => {
+          const { error } = await supabase
+            .from("shop_items")
+            .update({ disabled: vars.disabled })
+            .eq("id", vars.id)
+          if (error) throw error
+        },
+      })
+    },
   })
 }
 
 export function useDeleteShopItem() {
   const qc = useQueryClient()
+  registerHandler("deleteShopItem", async (varsAny: unknown) => {
+    const vars = varsAny as { id: string; shop_id: string }
+    const { error } = await supabase
+      .from("shop_items")
+      .delete()
+      .eq("id", vars.id)
+    if (error) throw error
+  })
   return useMutation({
     mutationFn: async ({ id, shop_id }: { id: string; shop_id: string }) => {
       const { error } = await supabase.from("shop_items").delete().eq("id", id)
@@ -580,6 +912,18 @@ export function useDeleteShopItem() {
     },
     onError: (_e, _vars, ctx) => {
       if (ctx?.key && ctx?.prev) qc.setQueryData(ctx.key, ctx.prev)
+      const vars = _vars
+      void enqueue({
+        key: "deleteShopItem",
+        payload: vars,
+        run: async () => {
+          const { error } = await supabase
+            .from("shop_items")
+            .delete()
+            .eq("id", vars.id)
+          if (error) throw error
+        },
+      })
     },
     onSuccess: (_v, vars) => {
       qc.invalidateQueries({ queryKey: ["shop", vars.shop_id] })
@@ -589,6 +933,19 @@ export function useDeleteShopItem() {
 
 export function usePurchaseItem() {
   const qc = useQueryClient()
+  registerHandler("purchaseItem", async (varsAny: unknown) => {
+    const v = varsAny as {
+      name: string
+      price: number
+      bundle_quantity: number
+    }
+    const { error } = await supabase.rpc("purchase_item", {
+      name: v.name,
+      price: v.price,
+      bundle_quantity: v.bundle_quantity,
+    } as any)
+    if (error) throw error
+  })
   return useMutation({
     mutationFn: async ({
       name,
@@ -599,40 +956,48 @@ export function usePurchaseItem() {
       price: number
       bundle_quantity: number
     }) => {
-      // Deduct tokens
-      const { data: asData, error: asErr } = await supabase
-        .from("app_state")
-        .select("id, tokens")
-        .limit(1)
-        .single()
-      if (asErr) throw asErr
-      const app = asData as unknown as { id: string; tokens: number }
-      const nextTokens = Math.max(0, (app.tokens ?? 0) - price)
-      const { error: updTokensErr } = await supabase
-        .from("app_state")
-        .update({ tokens: nextTokens })
-        .eq("id", app.id)
-      if (updTokensErr) throw updTokensErr
+      // Prefer atomic server-side purchase via RPC; fallback to client steps
+      const { error: rpcError } = await supabase.rpc("purchase_item", {
+        name,
+        price,
+        bundle_quantity,
+      } as any)
+      if (rpcError) {
+        // Fallback implementation (non-atomic)
+        const { data: asData, error: asErr } = await supabase
+          .from("app_state")
+          .select("id, tokens")
+          .limit(1)
+          .single()
+        if (asErr) throw asErr
+        const app = asData as unknown as { id: string; tokens: number }
+        if ((app.tokens ?? 0) < price) throw new Error("INSUFFICIENT_TOKENS")
+        const nextTokens = Math.max(0, (app.tokens ?? 0) - price)
+        const { error: updTokensErr } = await supabase
+          .from("app_state")
+          .update({ tokens: nextTokens })
+          .eq("id", app.id)
+        if (updTokensErr) throw updTokensErr
 
-      // Upsert inventory
-      const { data: inv, error: invErr } = await supabase
-        .from("inventory")
-        .select("id, quantity")
-        .eq("item_name", name)
-        .limit(1)
-        .maybeSingle()
-      if (invErr) throw invErr
-      if (inv?.id) {
-        const { error } = await supabase
+        const { data: inv, error: invErr } = await supabase
           .from("inventory")
-          .update({ quantity: (inv.quantity ?? 0) + bundle_quantity })
-          .eq("id", inv.id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from("inventory")
-          .insert({ item_name: name, quantity: bundle_quantity })
-        if (error) throw error
+          .select("id, quantity")
+          .eq("item_name", name)
+          .limit(1)
+          .maybeSingle()
+        if (invErr) throw invErr
+        if (inv?.id) {
+          const { error } = await supabase
+            .from("inventory")
+            .update({ quantity: (inv.quantity ?? 0) + bundle_quantity })
+            .eq("id", inv.id)
+          if (error) throw error
+        } else {
+          const { error } = await supabase
+            .from("inventory")
+            .insert({ item_name: name, quantity: bundle_quantity })
+          if (error) throw error
+        }
       }
     },
     onMutate: async ({ name, price, bundle_quantity }) => {
@@ -673,6 +1038,20 @@ export function usePurchaseItem() {
       if (!ctx) return
       if (ctx.prevApp) qc.setQueryData(["app_state"], ctx.prevApp)
       if (ctx.prevInv) qc.setQueryData(["inventory"], ctx.prevInv)
+      const vars = _v
+      if (!vars) return
+      void enqueue({
+        key: "purchaseItem",
+        payload: vars,
+        run: async () => {
+          const { error } = await supabase.rpc("purchase_item", {
+            name: vars.name,
+            price: vars.price,
+            bundle_quantity: vars.bundle_quantity,
+          } as any)
+          if (error) throw error
+        },
+      })
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["app_state"] })

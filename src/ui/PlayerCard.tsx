@@ -124,18 +124,21 @@ export default function PlayerCard({ player: p }: Props) {
         </div>
         <div className="bg-gray-800 rounded p-2">
           <div className="text-gray-400">Action</div>
-          <input
-            type="number"
-            className="w-24 bg-gray-900 rounded px-1"
-            value={p.action_points}
-            onChange={(e) =>
-              update.mutate({
-                id: p.id,
-                field: "action_points",
-                value: Number(e.target.value || 0),
-              })
-            }
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              className="w-24 bg-gray-900 rounded px-1"
+              value={p.action_points}
+              onChange={(e) =>
+                update.mutate({
+                  id: p.id,
+                  field: "action_points",
+                  value: Number(e.target.value || 0),
+                })
+              }
+            />
+            <span className="text-xs text-gray-400">/ 2</span>
+          </div>
         </div>
         <div className="bg-gray-800 rounded p-2">
           <div className="text-gray-400">Fatigue</div>
@@ -157,33 +160,81 @@ export default function PlayerCard({ player: p }: Props) {
       <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
         <div className="bg-gray-800 rounded p-2">
           <div className="text-gray-400">Hunger</div>
-          <input
-            type="number"
-            className="w-24 bg-gray-900 rounded px-1"
-            value={p.hunger}
-            onChange={(e) =>
-              update.mutate({
-                id: p.id,
-                field: "hunger",
-                value: Number(e.target.value || 0),
-              })
-            }
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              className="w-24 bg-gray-900 rounded px-1"
+              value={p.hunger}
+              onChange={(e) => {
+                const val = Number(e.target.value || 0)
+                const clamped = Math.max(-2, Math.min(2, val))
+                update.mutate({ id: p.id, field: "hunger", value: clamped })
+              }}
+            />
+            <button
+              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              onClick={() =>
+                update.mutate({
+                  id: p.id,
+                  field: "hunger",
+                  value: p.hunger + 1,
+                })
+              }
+            >
+              +1
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              onClick={() =>
+                update.mutate({
+                  id: p.id,
+                  field: "hunger",
+                  value: p.hunger - 1,
+                })
+              }
+            >
+              -1
+            </button>
+          </div>
         </div>
         <div className="bg-gray-800 rounded p-2">
           <div className="text-gray-400">Thirst</div>
-          <input
-            type="number"
-            className="w-24 bg-gray-900 rounded px-1"
-            value={p.thirst}
-            onChange={(e) =>
-              update.mutate({
-                id: p.id,
-                field: "thirst",
-                value: Number(e.target.value || 0),
-              })
-            }
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              className="w-24 bg-gray-900 rounded px-1"
+              value={p.thirst}
+              onChange={(e) => {
+                const val = Number(e.target.value || 0)
+                const clamped = Math.max(-2, Math.min(2, val))
+                update.mutate({ id: p.id, field: "thirst", value: clamped })
+              }}
+            />
+            <button
+              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              onClick={() =>
+                update.mutate({
+                  id: p.id,
+                  field: "thirst",
+                  value: p.thirst + 1,
+                })
+              }
+            >
+              +1
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              onClick={() =>
+                update.mutate({
+                  id: p.id,
+                  field: "thirst",
+                  value: p.thirst - 1,
+                })
+              }
+            >
+              -1
+            </button>
+          </div>
         </div>
         <div className="bg-gray-800 rounded p-2">
           <div className="text-gray-400">AP Reset</div>

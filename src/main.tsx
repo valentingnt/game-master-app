@@ -12,6 +12,8 @@ import "./index.css"
 import App from "./routes/App"
 import Dashboard from "./routes/Dashboard"
 import Shop from "./routes/Shop"
+import { ToastProvider } from "./ui/Toast"
+import { setOnlineState } from "./lib/offlineQueue"
 
 const queryClient = new QueryClient()
 
@@ -37,7 +39,13 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </QueryClientProvider>
   </React.StrictMode>
 )
+
+// Track connectivity for offline queue
+window.addEventListener("online", () => setOnlineState(true))
+window.addEventListener("offline", () => setOnlineState(false))

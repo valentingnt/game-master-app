@@ -5,6 +5,8 @@ import {
   usePurchaseItem,
   useToggleShopItemDisabled,
 } from "../lib/hooks"
+import Modal from "../ui/Modal"
+import { useToast } from "../ui/Toast"
 
 type Props = { shopId: "shop1" | "shop2" }
 
@@ -14,12 +16,16 @@ export default function Shop({ shopId }: Props) {
   const purchase = usePurchaseItem()
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const toggleItemDisabled = useToggleShopItemDisabled()
+  const { show } = useToast()
 
   const items = data?.items ?? []
   const unlocked = data?.shop?.unlocked ?? false
 
   const onBuy = (id: string, price: number) => {
-    if (tokens < price) return alert("Not enough tokens")
+    if (tokens < price) {
+      show({ type: "error", message: "Not enough tokens" })
+      return
+    }
     setConfirmId(id)
   }
 
@@ -29,9 +35,25 @@ export default function Shop({ shopId }: Props) {
     name: string,
     bundle: number
   ) => {
-    purchase.mutate({ name, price, bundle_quantity: bundle })
+    purchase.mutate(
+      { name, price, bundle_quantity: bundle },
+      {
+        onSuccess: () =>
+          show({
+            type: "success",
+            message: `Purchased ${bundle > 1 ? `${bundle}x ` : ""}${name}`,
+          }),
+        onError: (e) =>
+          show({
+            type: "error",
+            message:
+              (e as any)?.message === "INSUFFICIENT_TOKENS"
+                ? "Not enough tokens"
+                : "Purchase failed (queued if offline)",
+          }),
+      }
+    )
     setConfirmId(null)
-    alert(`Purchased ${bundle > 1 ? `${bundle}x ` : ""}${name}`)
   }
 
   return (
@@ -68,12 +90,20 @@ export default function Shop({ shopId }: Props) {
               >
                 Buy
               </button>
-              {confirmId === it.id && (
-                <div className="mt-3 p-3 border border-gray-700 rounded">
-                  <div className="text-sm mb-2">Confirm purchase?</div>
-                  <div className="flex gap-2">
+              <Modal
+                open={confirmId === it.id}
+                onClose={() => setConfirmId(null)}
+                title="Confirm Purchase"
+              >
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-300">
+                    Buy{" "}
+                    {it.bundle_quantity > 1 ? `${it.bundle_quantity}x ` : ""}
+                    {it.name} for {it.price} tokens?
+                  </div>
+                  <div className="flex gap-2 justify-end">
                     <button
-                      className="px-3 py-1.5 rounded bg-gray-700"
+                      className="px-3 py-1.5 rounded bg-gray-800"
                       onClick={() => setConfirmId(null)}
                     >
                       Cancel
@@ -88,7 +118,7 @@ export default function Shop({ shopId }: Props) {
                     </button>
                   </div>
                 </div>
-              )}
+              </Modal>
             </div>
           ))}
         </div>
