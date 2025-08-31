@@ -57,38 +57,46 @@ export default function Shop({ shopId }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">
-        {shopId === "shop1" ? "Shop 1" : "Shop 2"}
-      </h1>
+    <div className="space-y-8">
+      <div className="flex items-end justify-between">
+        <h1 className="display-title text-2xl uppercase tracking-widest">
+          {shopId === "shop1" ? "Shop 1" : "Shop 2"}
+        </h1>
+        <div className="muted text-sm">Balance: {tokens} tokens</div>
+      </div>
       {!unlocked && (
         <p className="text-sm text-yellow-400">This shop is locked.</p>
       )}
       {unlocked && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((it) => (
+          {items.map((it, idx) => (
             <div
               key={it.id}
-              className={`rounded border border-gray-800 p-4 bg-gray-900 ${
+              className={`shop-card card-hover tilt-hover relative overflow-hidden ${
                 it.disabled ? "opacity-50" : ""
               }`}
+              style={{ animationDelay: `${idx * 40}ms` }}
             >
-              <div className="font-medium">{it.name}</div>
-              <div className="text-sm text-gray-400">
-                Price: {it.price} tokens
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="display-title text-lg">{it.name}</div>
+                  <div className="text-sm muted">{it.price} tokens</div>
+                </div>
+                {it.bundle_quantity > 1 && (
+                  <div className="badge">x{it.bundle_quantity}</div>
+                )}
               </div>
-              {it.bundle_quantity > 1 && (
-                <div className="text-xs text-gray-500">
-                  Bundle: {it.bundle_quantity}
+              {it.disabled && (
+                <div className="absolute inset-0 bg-black/30 backdrop-blur-sm grid place-items-center text-xs uppercase tracking-wider">
+                  Unavailable
                 </div>
               )}
-              {/* All changes disabled on shop pages; only Buy is interactive */}
               <button
                 disabled={!unlocked || !!it.disabled}
-                className="mt-3 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50"
+                className="mt-4 btn btn-primary btn-shine disabled:opacity-50"
                 onClick={() => onBuy(it.id, it.price)}
               >
-                Buy
+                Purchase
               </button>
               <Modal
                 open={confirmId === it.id}
@@ -102,14 +110,11 @@ export default function Shop({ shopId }: Props) {
                     {it.name} for {it.price} tokens?
                   </div>
                   <div className="flex gap-2 justify-end">
-                    <button
-                      className="px-3 py-1.5 rounded bg-gray-800"
-                      onClick={() => setConfirmId(null)}
-                    >
+                    <button className="btn" onClick={() => setConfirmId(null)}>
                       Cancel
                     </button>
                     <button
-                      className="px-3 py-1.5 rounded bg-blue-600"
+                      className="btn btn-primary"
                       onClick={() =>
                         confirmBuy(it.id, it.price, it.name, it.bundle_quantity)
                       }
