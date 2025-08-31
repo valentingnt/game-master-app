@@ -385,6 +385,93 @@ export function useUpdatePlayerField() {
   })
 }
 
+export function useUploadPlayerAvatar() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      file,
+      previousUrl,
+    }: {
+      id: string
+      file: File
+      previousUrl?: string | null
+    }) => {
+      const ext = (file.name.split(".").pop() || "bin").toLowerCase()
+      const path = `${id}/${Date.now()}.${ext}`
+      const { error: uploadErr } = await supabase.storage
+        .from("pp")
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type || "application/octet-stream",
+        })
+      if (uploadErr) throw uploadErr
+      const { data: pub } = await supabase.storage.from("pp").getPublicUrl(path)
+      const url = (pub as any)?.publicUrl as string
+      const { error: updErr } = await supabase
+        .from("players")
+        .update({ avatar_url: url })
+        .eq("id", id)
+      if (updErr) throw updErr
+      // Best-effort delete of previous file if provided
+      try {
+        const src = (previousUrl ?? "").trim()
+        let oldPath = ""
+        if (src.includes("/storage/v1/object/public/pp/")) {
+          oldPath = src.split("/storage/v1/object/public/pp/")[1] || ""
+        } else if (src.includes("/storage/v1/object/pp/")) {
+          oldPath = src.split("/storage/v1/object/pp/")[1] || ""
+        } else if (src.startsWith("pp/")) {
+          oldPath = src.replace(/^pp\//, "")
+        }
+        if (oldPath && oldPath !== path) {
+          await supabase.storage.from("pp").remove([oldPath])
+        }
+      } catch (_e) {
+        // ignore delete errors
+      }
+      return url
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["players"] })
+    },
+  })
+}
+
+export function useClearPlayerAvatar() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, url }: { id: string; url: string | null }) => {
+      // Best-effort delete of the storage object if URL points to pp bucket
+      try {
+        const src = (url ?? "").trim()
+        // Accept both public and non-public paths
+        let path = ""
+        if (src.includes("/storage/v1/object/public/pp/")) {
+          path = src.split("/storage/v1/object/public/pp/")[1] || ""
+        } else if (src.includes("/storage/v1/object/pp/")) {
+          path = src.split("/storage/v1/object/pp/")[1] || ""
+        } else if (src.startsWith("pp/")) {
+          path = src.replace(/^pp\//, "")
+        }
+        if (path) {
+          await supabase.storage.from("pp").remove([path])
+        }
+      } catch (_e) {
+        // ignore storage delete failures
+      }
+      const { error: updErr } = await supabase
+        .from("players")
+        .update({ avatar_url: "" })
+        .eq("id", id)
+      if (updErr) throw updErr
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["players"] })
+    },
+  })
+}
+
 export function useShop(shopId: string) {
   return useQuery({
     queryKey: ["shop", shopId],

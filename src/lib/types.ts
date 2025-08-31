@@ -33,6 +33,14 @@ export type Player = {
   dexterity: number
   intuition: number
   order: number
+  history?: string | null
+  physical_description?: string | null
+  character_traits?: string | null
+  age?: string | null
+  size?: string | null
+  weight?: string | null
+  sex?: string | null
+  astrological_sign?: string | null
 }
 
 export type Shop = {

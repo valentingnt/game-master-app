@@ -15,6 +15,7 @@ import Shop from "./routes/Shop"
 import Player from "./routes/Player"
 import PlayerApp from "./routes/PlayerApp"
 import DashboardApp from "./routes/DashboardApp"
+import Display from "./routes/Display"
 import { ToastProvider } from "./ui/Toast"
 import { setOnlineState } from "./lib/offlineQueue"
 
@@ -27,25 +28,30 @@ subscribePlayers(queryClient)
 subscribeShops(queryClient)
 
 const router = createBrowserRouter([
+  // Player layout hosts shops and player pages
   {
-    path: "/",
-    element: <App />,
+    path: "/player",
+    element: <PlayerApp />,
     children: [
-      { path: "/", element: <Shop shopId="shop1" /> },
-      { path: "/shop1", element: <Shop shopId="shop1" /> },
-      { path: "/shop1", element: <Shop shopId="shop1" /> },
-      { path: "/shop2", element: <Shop shopId="shop2" /> },
+      { path: "", element: <Shop shopId="shop1" /> },
+      { path: "shop1", element: <Shop shopId="shop1" /> },
+      { path: "shop2", element: <Shop shopId="shop2" /> },
+      { path: ":id", element: <Player /> },
     ],
   },
+  // General display page (standalone, no header)
+  { path: "/display", element: <Display /> },
+  // Dashboard layout (password-gated)
   {
     path: "/dashboard",
     element: <DashboardApp />,
     children: [{ path: "", element: <Dashboard /> }],
   },
+  // Root → redirect-equivalent: render App shell showing link to /player; keep minimal
   {
-    path: "/player",
-    element: <PlayerApp />,
-    children: [{ path: ":id", element: <Player /> }],
+    path: "/",
+    element: <App />,
+    children: [{ path: "", element: <Shop shopId="shop1" /> }],
   },
 ])
 

@@ -1,13 +1,10 @@
-import { useMemo } from "react"
-import { useParams, NavLink } from "react-router-dom"
-import LEDDisplay from "../ui/LEDDisplay"
-import { useAppState, useInventory, usePlayers } from "../lib/hooks"
+import { useEffect, useMemo } from "react"
+import { useParams } from "react-router-dom"
+import { usePlayers } from "../lib/hooks"
 
 export default function Player() {
   const params = useParams()
   const playerId = params.id as string
-  const { data: app } = useAppState()
-  const { data: inv } = useInventory()
   const { data: players } = usePlayers()
 
   const player = useMemo(
@@ -15,73 +12,16 @@ export default function Player() {
     [players, playerId]
   )
 
+  useEffect(() => {
+    if (playerId) {
+      try {
+        localStorage.setItem("last_player_id", playerId)
+      } catch {}
+    }
+  }, [playerId])
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <nav className="flex gap-4">
-          <NavLink
-            to="/shop1"
-            className={({ isActive }) =>
-              `px-2 py-1 rounded ${
-                isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:text-white"
-              }`
-            }
-          >
-            Shop 1
-          </NavLink>
-          <NavLink
-            to="/shop2"
-            className={({ isActive }) =>
-              `px-2 py-1 rounded ${
-                isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:text-white"
-              }`
-            }
-          >
-            Shop 2
-          </NavLink>
-        </nav>
-      </div>
-
-      <section>
-        <LEDDisplay size="lg" text={app?.led_main_text ?? ""} variant="main" />
-        <div className="grid grid-cols-2 gap-4 mt-3">
-          <LEDDisplay size="sm" text={app?.led_small_top ?? ""} variant="top" />
-          <LEDDisplay
-            size="sm"
-            text={app?.led_small_bottom ?? ""}
-            variant="bottom"
-          />
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="rounded border border-gray-800 p-4 bg-gray-900 space-y-3">
-          <div className="font-semibold">Day</div>
-          <div className="text-2xl">Day {app?.day ?? 0}</div>
-          <div className="font-semibold mt-4">Tokens</div>
-          <div className="text-2xl">{app?.tokens ?? 0}</div>
-        </div>
-
-        <div className="lg:col-span-2 rounded border border-gray-800 p-4 bg-gray-900">
-          <div className="font-semibold mb-3">Inventory</div>
-          <ul className="space-y-2">
-            {(inv ?? []).map((it) => (
-              <li key={it.id} className="flex items-center gap-2">
-                <div className="flex-1 truncate">{it.item_name}</div>
-                <div className="w-16 text-right">{it.quantity}</div>
-              </li>
-            ))}
-            {(!inv || inv.length === 0) && (
-              <li className="text-sm text-gray-400">No items</li>
-            )}
-          </ul>
-        </div>
-      </section>
-
       <section className="rounded border border-gray-800 p-4 bg-gray-900">
         <div className="font-semibold mb-3">Your Character</div>
         {!player ? (
@@ -172,6 +112,78 @@ export default function Player() {
           </div>
         )}
       </section>
+
+      {player && (
+        <section className="rounded border border-gray-800 p-4 bg-gray-900">
+          <div className="text-gray-400 text-sm mb-2">
+            Additional Information
+          </div>
+          <div className="space-y-3 text-sm">
+            {player.history && (
+              <div>
+                <div className="text-gray-400">History</div>
+                <div className="whitespace-pre-wrap">{player.history}</div>
+              </div>
+            )}
+            {player.physical_description && (
+              <div>
+                <div className="text-gray-400">Physical Description</div>
+                <div className="whitespace-pre-wrap">
+                  {player.physical_description}
+                </div>
+              </div>
+            )}
+            {player.character_traits && (
+              <div>
+                <div className="text-gray-400">Character Traits</div>
+                <div className="whitespace-pre-wrap">
+                  {player.character_traits}
+                </div>
+              </div>
+            )}
+            {player.age && (
+              <div>
+                <div className="text-gray-400">Age</div>
+                <div>{player.age}</div>
+              </div>
+            )}
+            {player.size && (
+              <div>
+                <div className="text-gray-400">Size</div>
+                <div>{player.size}</div>
+              </div>
+            )}
+            {player.weight && (
+              <div>
+                <div className="text-gray-400">Weight</div>
+                <div>{player.weight}</div>
+              </div>
+            )}
+            {player.sex && (
+              <div>
+                <div className="text-gray-400">Sex</div>
+                <div>{player.sex}</div>
+              </div>
+            )}
+            {player.astrological_sign && (
+              <div>
+                <div className="text-gray-400">Astrological Sign</div>
+                <div>{player.astrological_sign}</div>
+              </div>
+            )}
+            {!player.history &&
+              !player.physical_description &&
+              !player.character_traits &&
+              !player.age &&
+              !player.size &&
+              !player.weight &&
+              !player.sex &&
+              !player.astrological_sign && (
+                <div className="text-gray-500">No additional information</div>
+              )}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

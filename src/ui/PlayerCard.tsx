@@ -1,17 +1,97 @@
 import type { Player } from "../lib/types"
-import { useUpdatePlayerField } from "../lib/hooks"
+import {
+  useUpdatePlayerField,
+  useUploadPlayerAvatar,
+  useClearPlayerAvatar,
+} from "../lib/hooks"
+import { supabase } from "../lib/supabaseClient"
+import { useToast } from "./Toast"
 
 type Props = { player: Player }
 
 export default function PlayerCard({ player: p }: Props) {
   const update = useUpdatePlayerField()
+  const { show } = useToast()
+  const upload = useUploadPlayerAvatar()
+  const clearAvatar = useClearPlayerAvatar()
+
+  const normalizeAvatarUrl = (url: string | null | undefined): string => {
+    const raw = (url ?? "").trim()
+    if (!raw) return ""
+    if (raw.startsWith("pp/")) {
+      const path = raw.replace(/^pp\//, "")
+      const { data } = supabase.storage.from("pp").getPublicUrl(path)
+      return (data as any)?.publicUrl || raw
+    }
+    if (raw.includes("/storage/v1/object/pp/")) {
+      return raw.replace(
+        "/storage/v1/object/pp/",
+        "/storage/v1/object/public/pp/"
+      )
+    }
+    return raw
+  }
+
+  async function resizeImageFile(
+    file: File,
+    maxWidth: number,
+    maxHeight: number,
+    quality: number
+  ): Promise<File> {
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(new Error("Failed to read file"))
+      reader.readAsDataURL(file)
+    })
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image()
+      i.onload = () => resolve(i)
+      i.onerror = () => reject(new Error("Failed to load image"))
+      i.src = dataUrl
+    })
+
+    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height, 1)
+    const targetW = Math.round(img.width * ratio)
+    const targetH = Math.round(img.height * ratio)
+
+    const canvas = document.createElement("canvas")
+    canvas.width = targetW
+    canvas.height = targetH
+    const ctx = canvas.getContext("2d")!
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = "high"
+    ctx.drawImage(img, 0, 0, targetW, targetH)
+
+    const blob: Blob = await new Promise((resolve) =>
+      canvas.toBlob(
+        (b) => resolve(b || new Blob()),
+        "image/webp",
+        Math.max(0.5, Math.min(quality, 0.95))
+      )
+    )
+    const ext = "webp"
+    const nameBase = file.name.replace(/\.[^.]+$/, "") || "avatar"
+    return new File([blob], `${nameBase}.${ext}`, { type: "image/webp" })
+  }
+
+  const copyLink = async () => {
+    try {
+      const url = `${window.location.origin}/player/${p.id}`
+      await navigator.clipboard.writeText(url)
+      show({ type: "success", message: "Player link copied" })
+    } catch (_e) {
+      show({ type: "error", message: "Failed to copy link" })
+    }
+  }
 
   return (
     <div className="rounded border border-gray-800 p-4 bg-gray-900 w-full">
       <div className="flex items-center gap-3">
-        {p.avatar_url ? (
+        {normalizeAvatarUrl(p.avatar_url) ? (
           <img
-            src={p.avatar_url}
+            src={normalizeAvatarUrl(p.avatar_url)}
             alt={`${p.first_name} ${p.last_name}`}
             className={`w-14 h-14 rounded object-cover ${
               p.is_dead ? "grayscale" : ""
@@ -65,22 +145,83 @@ export default function PlayerCard({ player: p }: Props) {
           />
           Dead
         </label>
+        <button
+          className="ml-2 px-2 py-1 rounded bg-gray-800 text-xs"
+          onClick={copyLink}
+        >
+          Copy Link
+        </button>
       </div>
 
       <div className="mt-3">
         <label className="text-xs text-gray-400">Avatar URL</label>
-        <input
-          className="mt-1 w-full bg-gray-800 rounded px-2 py-1"
-          value={p.avatar_url ?? ""}
-          onChange={(e) =>
-            update.mutate({
-              id: p.id,
-              field: "avatar_url",
-              value: e.target.value,
-            })
-          }
-          placeholder="https://..."
-        />
+        <div className="mt-1 flex items-center gap-2">
+          <input
+            className="flex-1 bg-gray-800 rounded px-2 py-1"
+            value={p.avatar_url ?? ""}
+            onChange={(e) =>
+              update.mutate({
+                id: p.id,
+                field: "avatar_url",
+                value: e.target.value,
+              })
+            }
+            onBlur={(e) => {
+              const next = normalizeAvatarUrl(e.target.value)
+              if (next && next !== e.target.value) {
+                update.mutate({ id: p.id, field: "avatar_url", value: next })
+              }
+            }}
+            placeholder="https://..."
+          />
+          <label className="px-2 py-1 rounded bg-gray-800 cursor-pointer text-xs">
+            Upload
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const inputEl = e.currentTarget as HTMLInputElement
+                const file = inputEl.files?.[0]
+                if (!file) return
+                // Clear immediately to avoid accessing pooled event later
+                inputEl.value = ""
+                try {
+                  const resized = await resizeImageFile(file, 512, 512, 0.85)
+                  upload.mutate(
+                    { id: p.id, file: resized, previousUrl: p.avatar_url },
+                    {
+                      onSuccess: () =>
+                        show({ type: "success", message: "Avatar uploaded" }),
+                      onError: () =>
+                        show({ type: "error", message: "Upload failed" }),
+                    }
+                  )
+                } catch (_e) {
+                  show({ type: "error", message: "Image processing failed" })
+                }
+              }}
+            />
+          </label>
+          {p.avatar_url && (
+            <button
+              className="px-2 py-1 rounded bg-gray-800 text-xs"
+              onClick={() => {
+                clearAvatar.mutate(
+                  { id: p.id, url: p.avatar_url },
+                  {
+                    onSuccess: () =>
+                      show({ type: "success", message: "Avatar cleared" }),
+                    onError: () =>
+                      show({ type: "error", message: "Failed to clear" }),
+                  }
+                )
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">

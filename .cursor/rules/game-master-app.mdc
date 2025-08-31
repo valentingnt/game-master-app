@@ -86,10 +86,16 @@ These guidelines steer the AI agent to build a React-based game master interface
 
 ## UI / UX Expectations
 
-- Three distinct views (main, shop 1, shop 2), navigable via UI.
+- Three distinct views (main, shop 1, shop 2), navigable via clean UI.
 - Inline editing for all display fields in game master mode.
 - Confirmation modals for critical actions like purchases and day advancement.
 - Editability should be intuitive and responsive.
+- Design aesthetic: monochromatic (black/white/gray), angular geometry, minimal interface elements.
+- Should be dark with light elements.
+- Should use large, clean fonts with high contrast.
+- Should use a clean, modern design with a focus on readability and usability.
+- Icons should be used to add visual interest and clarity.
+- Clean typography, sharp edges, high contrast, no unnecessary visual clutter.
 
 ---
 
