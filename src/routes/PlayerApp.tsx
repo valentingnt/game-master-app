@@ -22,7 +22,7 @@ export default function PlayerApp() {
                 `btn btn-ghost ${isActive ? "text-white" : "text-gray-300"}`
               }
             >
-              Player
+              Joueur
             </NavLink>
             <NavLink
               to="/player/shop1"
@@ -32,7 +32,7 @@ export default function PlayerApp() {
                 }`
               }
             >
-              Shop 1
+              Boutique 1
             </NavLink>
             <NavLink
               to="/player/shop2"
@@ -42,7 +42,7 @@ export default function PlayerApp() {
                 }`
               }
             >
-              Shop 2
+              Boutique 2
             </NavLink>
           </nav>
         </div>

@@ -23,7 +23,7 @@ export default function MessageHistory() {
       <div className="flex items-center justify-between mb-3">
         <div className="display-title text-base">Messages</div>
         <button className="btn" onClick={() => setOpen(true)}>
-          New
+          Nouveau
         </button>
       </div>
       <div className="space-y-2 max-h-64 overflow-auto">
@@ -35,7 +35,7 @@ export default function MessageHistory() {
             <div className="flex-1">
               <div className="muted whitespace-pre-wrap">{m.content}</div>
               <div className="text-xs text-gray-500 mt-1">
-                Target:{" "}
+                Joueur:{" "}
                 {m.target_player_id
                   ? playerMap[m.target_player_id] || "Unknown"
                   : "All"}
@@ -49,12 +49,12 @@ export default function MessageHistory() {
                   toggle.mutate({ id: m.id, show: e.target.checked })
                 }
               />
-              Show
+              Afficher
             </label>
           </div>
         ))}
         {(!messages || messages.length === 0) && (
-          <div className="text-sm muted">No messages yet.</div>
+          <div className="text-sm muted">Aucun message.</div>
         )}
       </div>
       {open && <SendMessageModal open={open} onClose={() => setOpen(false)} />}

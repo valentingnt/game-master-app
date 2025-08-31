@@ -75,32 +75,32 @@ export default function DashboardApp() {
               className="w-full max-w-sm card-surface p-6 space-y-4"
             >
               <div className="display-title text-lg">
-                Enter Dashboard Password
+                Entrez le mot de passe
               </div>
               <input
                 type="password"
                 className="w-full bg-white/10 border border-white/10 rounded px-3 py-2"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
+                placeholder="Mot de passe"
               />
               {error && <div className="text-sm text-red-400">{error}</div>}
               <button type="submit" className="w-full btn btn-primary">
-                Unlock
+                Déverrouiller
               </button>
               {!required && (
                 <div className="text-xs text-gray-400">
-                  No password configured. Set <code>VITE_GM_PASSWORD</code> to
-                  require one.
+                  Aucun mot de passe configuré. Ajoutez{" "}
+                  <code>VITE_GM_PASSWORD</code> pour exiger un mot de passe.
                 </div>
               )}
             </form>
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-end fixed top-4 right-4">
               <button className="btn" onClick={logout}>
-                Lock
+                Verrouiller
               </button>
             </div>
             <Outlet />

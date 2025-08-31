@@ -51,11 +51,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`rounded border p-3 shadow text-sm ${
+            className={`card-surface border p-3 shadow text-sm ${
               t.type === "error"
-                ? "bg-red-900/30 border-red-700 text-red-200"
+                ? "bg-red-900/40 border-red-700 text-red-100"
                 : t.type === "success"
-                ? "bg-green-900/30 border-green-700 text-green-200"
+                ? "bg-green-900/40 border-green-700 text-green-100"
                 : "bg-ink-900/80 border-white/15 text-gray-100"
             }`}
           >

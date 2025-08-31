@@ -41,14 +41,14 @@ export default function PlayerCard({ player: p }: Props) {
     const dataUrl: string = await new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => resolve(reader.result as string)
-      reader.onerror = () => reject(new Error("Failed to read file"))
+      reader.onerror = () => reject(new Error("Échec de la lecture du fichier"))
       reader.readAsDataURL(file)
     })
 
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const i = new Image()
       i.onload = () => resolve(i)
-      i.onerror = () => reject(new Error("Failed to load image"))
+      i.onerror = () => reject(new Error("Échec de la chargement de l'image"))
       i.src = dataUrl
     })
 
@@ -80,15 +80,15 @@ export default function PlayerCard({ player: p }: Props) {
     try {
       const url = `${window.location.origin}/player/${p.id}`
       await navigator.clipboard.writeText(url)
-      show({ type: "success", message: "Player link copied" })
+      show({ type: "success", message: "Lien du joueur copié" })
     } catch (_e) {
-      show({ type: "error", message: "Failed to copy link" })
+      show({ type: "error", message: "Échec de la copie du lien" })
     }
   }
 
   return (
     <div className="card-surface p-4 w-full">
-      <div className="flex items-center gap-3">
+      <div className="flex items-start sm:items-center gap-3 flex-wrap">
         {normalizeAvatarUrl(p.avatar_url) ? (
           <img
             src={normalizeAvatarUrl(p.avatar_url)}
@@ -104,10 +104,10 @@ export default function PlayerCard({ player: p }: Props) {
             }`}
           />
         )}
-        <div className="flex-1">
-          <div className="display-title text-base grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="flex-1 min-w-[170px]">
+          <div className="display-title text-base flex flex-wrap gap-2">
             <input
-              className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
+              className="bg-white/10 border border-white/10 rounded px-2 py-1 min-w-[160px] flex-1"
               value={p.first_name}
               onChange={(e) =>
                 update.mutate({
@@ -118,7 +118,7 @@ export default function PlayerCard({ player: p }: Props) {
               }
             />
             <input
-              className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
+              className="bg-white/10 border border-white/10 rounded px-2 py-1 min-w-[160px] flex-1"
               value={p.last_name}
               onChange={(e) =>
                 update.mutate({
@@ -129,9 +129,8 @@ export default function PlayerCard({ player: p }: Props) {
               }
             />
           </div>
-          <div className="text-xs text-gray-400 mt-1">{`Orientation ${p.orientation} • Strength ${p.strength} • Resistance ${p.resistance}`}</div>
         </div>
-        <label className="text-sm flex items-center gap-2">
+        <label className="text-sm flex items-center gap-2 whitespace-nowrap">
           <input
             type="checkbox"
             checked={p.is_dead}
@@ -143,15 +142,15 @@ export default function PlayerCard({ player: p }: Props) {
               })
             }
           />
-          Dead
+          Mort
         </label>
         <button className="ml-2 btn text-xs" onClick={copyLink}>
-          Copy Link
+          Copier le lien
         </button>
       </div>
 
       <div className="mt-3">
-        <label className="text-xs text-gray-400">Avatar URL</label>
+        <label className="text-xs text-gray-400">URL de l'avatar</label>
         <div className="mt-1 flex items-center gap-2">
           <input
             className="flex-1 bg-white/10 border border-white/10 rounded px-2 py-1"
@@ -172,7 +171,7 @@ export default function PlayerCard({ player: p }: Props) {
             placeholder="https://..."
           />
           <label className="px-2 py-1 rounded bg-white/10 border border-white/10 cursor-pointer text-xs">
-            Upload
+            Uploader
             <input
               type="file"
               accept="image/*"
@@ -189,13 +188,16 @@ export default function PlayerCard({ player: p }: Props) {
                     { id: p.id, file: resized, previousUrl: p.avatar_url },
                     {
                       onSuccess: () =>
-                        show({ type: "success", message: "Avatar uploaded" }),
+                        show({ type: "success", message: "Avatar uploadé" }),
                       onError: () =>
-                        show({ type: "error", message: "Upload failed" }),
+                        show({ type: "error", message: "Échec de l'upload" }),
                     }
                   )
                 } catch (_e) {
-                  show({ type: "error", message: "Image processing failed" })
+                  show({
+                    type: "error",
+                    message: "Échec du traitement de l'image",
+                  })
                 }
               }}
             />
@@ -208,23 +210,23 @@ export default function PlayerCard({ player: p }: Props) {
                   { id: p.id, url: p.avatar_url },
                   {
                     onSuccess: () =>
-                      show({ type: "success", message: "Avatar cleared" }),
+                      show({ type: "success", message: "Avatar effacé" }),
                     onError: () =>
-                      show({ type: "error", message: "Failed to clear" }),
+                      show({ type: "error", message: "Échec de l'effacement" }),
                   }
                 )
               }}
             >
-              Clear
+              Effacer
             </button>
           )}
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-        <div className="bg-white/10 border border-white/10 rounded p-2">
-          <div className="text-gray-400">HP</div>
-          <div className="flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap gap-3 text-sm">
+        <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
+          <div className="text-gray-400">Santé</div>
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="number"
               className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
@@ -259,10 +261,91 @@ export default function PlayerCard({ player: p }: Props) {
               }}
             />
           </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+                onClick={() => {
+                  const next = p.hp_current + 1
+                  const clamped = Math.min(next, p.hp_max)
+                  update.mutate({
+                    id: p.id,
+                    field: "hp_current",
+                    value: clamped,
+                  })
+                  if (clamped <= 0) {
+                    update.mutate({ id: p.id, field: "is_dead", value: true })
+                  }
+                }}
+              >
+                +1
+              </button>
+              <button
+                className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+                onClick={() => {
+                  const next = p.hp_current - 1
+                  const clamped = Math.min(next, p.hp_max)
+                  update.mutate({
+                    id: p.id,
+                    field: "hp_current",
+                    value: clamped,
+                  })
+                  if (clamped <= 0) {
+                    update.mutate({ id: p.id, field: "is_dead", value: true })
+                  }
+                }}
+              >
+                -1
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+                onClick={() => {
+                  const nextMax = p.hp_max + 1
+                  update.mutate({ id: p.id, field: "hp_max", value: nextMax })
+                  if (p.hp_current > nextMax) {
+                    update.mutate({
+                      id: p.id,
+                      field: "hp_current",
+                      value: nextMax,
+                    })
+                    if (nextMax <= 0) {
+                      update.mutate({ id: p.id, field: "is_dead", value: true })
+                    }
+                  }
+                }}
+              >
+                +1
+              </button>
+              <button
+                className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+                onClick={() => {
+                  const nextMax = p.hp_max - 1
+                  update.mutate({ id: p.id, field: "hp_max", value: nextMax })
+                  if (p.hp_current > nextMax) {
+                    update.mutate({
+                      id: p.id,
+                      field: "hp_current",
+                      value: nextMax,
+                    })
+                    if (nextMax <= 0) {
+                      update.mutate({ id: p.id, field: "is_dead", value: true })
+                    }
+                  }
+                  if (nextMax <= 0) {
+                    update.mutate({ id: p.id, field: "is_dead", value: true })
+                  }
+                }}
+              >
+                -1
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="bg-white/10 border border-white/10 rounded p-2">
-          <div className="text-gray-400">Action</div>
-          <div className="flex items-center gap-2">
+        <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
+          <div className="text-gray-400">Points d'action</div>
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="number"
               className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
@@ -277,8 +360,34 @@ export default function PlayerCard({ player: p }: Props) {
             />
             <span className="text-xs text-gray-400">/ 2</span>
           </div>
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+              onClick={() =>
+                update.mutate({
+                  id: p.id,
+                  field: "action_points",
+                  value: (p.action_points ?? 0) + 1,
+                })
+              }
+            >
+              +1
+            </button>
+            <button
+              className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+              onClick={() =>
+                update.mutate({
+                  id: p.id,
+                  field: "action_points",
+                  value: (p.action_points ?? 0) - 1,
+                })
+              }
+            >
+              -1
+            </button>
+          </div>
         </div>
-        <div className="bg-white/10 border border-white/10 rounded p-2">
+        <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
           <div className="text-gray-400">Fatigue</div>
           <input
             type="number"
@@ -292,13 +401,39 @@ export default function PlayerCard({ player: p }: Props) {
               })
             }
           />
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+              onClick={() =>
+                update.mutate({
+                  id: p.id,
+                  field: "fatigue",
+                  value: p.fatigue + 1,
+                })
+              }
+            >
+              +1
+            </button>
+            <button
+              className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+              onClick={() =>
+                update.mutate({
+                  id: p.id,
+                  field: "fatigue",
+                  value: p.fatigue - 1,
+                })
+              }
+            >
+              -1
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-        <div className="bg-white/10 border border-white/10 rounded p-2">
-          <div className="text-gray-400">Hunger</div>
-          <div className="flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap gap-3 text-sm">
+        <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
+          <div className="text-gray-400">Faim</div>
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="number"
               className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
@@ -335,9 +470,9 @@ export default function PlayerCard({ player: p }: Props) {
             </button>
           </div>
         </div>
-        <div className="bg-white/10 border border-white/10 rounded p-2">
-          <div className="text-gray-400">Thirst</div>
-          <div className="flex items-center gap-2">
+        <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
+          <div className="text-gray-400">Soif</div>
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="number"
               className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
@@ -374,34 +509,23 @@ export default function PlayerCard({ player: p }: Props) {
             </button>
           </div>
         </div>
-        <div className="bg-white/10 border border-white/10 rounded p-2">
-          <div className="text-gray-400">AP Reset</div>
-          <button
-            className="btn btn-primary"
-            onClick={() =>
-              update.mutate({ id: p.id, field: "action_points", value: 2 })
-            }
-          >
-            Set 2
-          </button>
-        </div>
       </div>
 
       <div className="mt-4">
-        <div className="text-gray-400 text-sm mb-2">Core Stats</div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+        <div className="text-gray-400 text-sm mb-2">Statistiques</div>
+        <div className="flex flex-wrap gap-3 text-sm">
           {[
             { key: "orientation", label: "Orientation" },
-            { key: "strength", label: "Strength" },
-            { key: "resistance", label: "Resistance" },
-            { key: "charisma", label: "Charisma" },
-            { key: "agility", label: "Agility" },
-            { key: "dexterity", label: "Dexterity" },
+            { key: "strength", label: "Force" },
+            { key: "resistance", label: "Résistance" },
+            { key: "charisma", label: "Charisme" },
+            { key: "agility", label: "Agilité" },
+            { key: "dexterity", label: "Dextérité" },
             { key: "intuition", label: "Intuition" },
           ].map((s) => (
             <div
               key={s.key}
-              className="bg-white/10 border border-white/10 rounded p-2"
+              className="bg-white/10 border border-white/10 rounded p-2 min-w-[200px] flex-1"
             >
               <div className="text-gray-400">{s.label}</div>
               <input
@@ -416,6 +540,32 @@ export default function PlayerCard({ player: p }: Props) {
                   })
                 }
               />
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+                  onClick={() =>
+                    update.mutate({
+                      id: p.id,
+                      field: s.key as any,
+                      value: ((p as any)[s.key] as number) + 1,
+                    })
+                  }
+                >
+                  +1
+                </button>
+                <button
+                  className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
+                  onClick={() =>
+                    update.mutate({
+                      id: p.id,
+                      field: s.key as any,
+                      value: ((p as any)[s.key] as number) - 1,
+                    })
+                  }
+                >
+                  -1
+                </button>
+              </div>
             </div>
           ))}
         </div>

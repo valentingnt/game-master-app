@@ -38,11 +38,11 @@ export default function SendMessageModal({ open, onClose }: Props) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Send Message">
+    <Modal open={open} onClose={onClose} title="Envoyer un message">
       <div className="space-y-4">
         <textarea
-          className="w-full min-h-[120px] bg-gray-800 rounded p-2"
-          placeholder="Type your message..."
+          className="w-full min-h-[120px] bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
+          placeholder="Tapez votre message..."
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
@@ -53,11 +53,11 @@ export default function SendMessageModal({ open, onClose }: Props) {
               checked={toAll}
               onChange={(e) => setToAll(e.target.checked)}
             />
-            Send to all players
+            Envoyer à tous les joueurs
           </label>
           {!toAll && (
-            <div className="max-h-48 overflow-auto rounded border border-gray-800 p-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            <div className="max-h-48 overflow-auto rounded border border-white/10 p-2">
+              <div className="flex flex-wrap gap-2 text-sm">
                 {(players ?? []).map((p) => (
                   <label key={p.id} className="flex items-center gap-2">
                     <input
@@ -73,15 +73,15 @@ export default function SendMessageModal({ open, onClose }: Props) {
           )}
         </div>
         <div className="flex items-center justify-end gap-2">
-          <button className="px-3 py-1.5 rounded bg-gray-800" onClick={onClose}>
-            Cancel
+          <button className="btn" onClick={onClose}>
+            Annuler
           </button>
           <button
-            className="px-3 py-1.5 rounded bg-blue-600 disabled:opacity-50"
+            className="btn btn-primary disabled:opacity-50"
             disabled={content.trim().length === 0}
             onClick={submit}
           >
-            Send
+            Envoyer
           </button>
         </div>
       </div>

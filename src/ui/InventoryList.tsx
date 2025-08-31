@@ -25,17 +25,15 @@ export default function InventoryList() {
   }
 
   const addItem = () => {
-    upsert.mutate({ item_name: "New Item", quantity: 1 })
+    upsert.mutate({ item_name: "Nouvel item", quantity: 1 })
   }
-
-  const removeItem = (id: string) => del.mutate({ id })
 
   return (
     <div className="card-surface p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="display-title text-base">Inventory</div>
+        <div className="display-title text-base">Inventaire</div>
         <button className="btn" onClick={addItem}>
-          Add
+          Ajouter
         </button>
       </div>
       <ul className="space-y-2">
@@ -44,7 +42,7 @@ export default function InventoryList() {
             <div className="flex-1 truncate">{it.item_name}</div>
             <div className="w-16 text-right">{it.quantity}</div>
             <button className="btn" onClick={() => openEdit(it.id)}>
-              Edit
+              Modifier
             </button>
           </li>
         ))}
@@ -53,7 +51,7 @@ export default function InventoryList() {
       <Modal
         open={!!editId}
         onClose={() => setEditId(null)}
-        title="Edit Inventory Item"
+        title="Modifier l'item d'inventaire"
       >
         <div className="space-y-3">
           <input
@@ -76,21 +74,22 @@ export default function InventoryList() {
                   { id: editId },
                   {
                     onSuccess: () =>
-                      show({ type: "success", message: "Item removed" }),
+                      show({ type: "success", message: "Item supprimé" }),
                     onError: () =>
                       show({
                         type: "error",
-                        message: "Failed to remove (queued if offline)",
+                        message:
+                          "Échec de la suppression (mis en file d'attente si hors ligne)",
                       }),
                   }
                 )
                 setEditId(null)
               }}
             >
-              Remove
+              Supprimer
             </button>
             <button className="btn" onClick={() => setEditId(null)}>
-              Cancel
+              Annuler
             </button>
             <button
               className="btn btn-primary"
@@ -100,18 +99,19 @@ export default function InventoryList() {
                   { id: editId, item_name: draftName, quantity: draftQty },
                   {
                     onSuccess: () =>
-                      show({ type: "success", message: "Item updated" }),
+                      show({ type: "success", message: "Item mis à jour" }),
                     onError: () =>
                       show({
                         type: "error",
-                        message: "Failed to update (queued if offline)",
+                        message:
+                          "Échec de la mise à jour (mis en file d'attente si hors ligne)",
                       }),
                   }
                 )
                 setEditId(null)
               }}
             >
-              Save
+              Enregistrer
             </button>
           </div>
         </div>

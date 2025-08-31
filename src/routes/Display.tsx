@@ -30,23 +30,25 @@ export default function Display() {
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="card-surface p-4 space-y-3">
-            <div className="display-title text-base">Day</div>
-            <div className="text-2xl">Day {app?.day ?? 0}</div>
-            <div className="display-title text-base mt-4">Tokens</div>
-            <div className="text-2xl">{app?.tokens ?? 0}</div>
+            <div className="display-title text-2xl">
+              Jour <span className="font-mono">{app?.day ?? 0}</span>
+            </div>
+            <div className="display-title text-2xl mt-4">
+              Tokens : <span className="font-mono">{app?.tokens ?? 0}</span>
+            </div>
           </div>
 
           <div className="lg:col-span-2 card-surface p-4">
-            <div className="display-title text-base mb-3">Inventory</div>
+            <div className="display-title text-2xl mb-3">Inventaire</div>
             <ul className="space-y-2">
               {(inv ?? []).map((it) => (
                 <li key={it.id} className="flex items-center gap-2">
-                  <div className="flex-1 truncate">{it.item_name}</div>
-                  <div className="w-16 text-right">{it.quantity}</div>
+                  <div className="flex-1 truncate text-xl">{it.item_name}</div>
+                  <div className="w-16 text-right text-xl">{it.quantity}</div>
                 </li>
               ))}
               {(!inv || inv.length === 0) && (
-                <li className="text-sm muted">No items</li>
+                <li className="text-sm muted">Pas d'items</li>
               )}
             </ul>
           </div>

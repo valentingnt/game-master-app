@@ -21,35 +21,39 @@ export default function Dashboard() {
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="space-y-6 lg:col-span-1">
+        <div className="space-y-6 lg:col-span-1 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto lg:min-h-0 pr-1">
           <section>
             <div className="card-surface p-4">
-              <div className="muted text-sm mb-1">Main Announcement</div>
+              <div className="muted text-sm mb-1">Panneau principal</div>
               <textarea
                 className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
                 rows={3}
                 value={app?.led_main_text ?? ""}
                 onChange={(e) => updateMain.mutate(e.target.value)}
-                placeholder="Main announcement"
+                placeholder="Panneau principal"
               />
             </div>
             <div className="grid grid-cols-2 gap-4 mt-3">
               <div className="card-surface p-4">
-                <div className="muted text-sm mb-1">Top Counter</div>
+                <div className="muted text-sm mb-1">
+                  Panneau secondaire de gauche
+                </div>
                 <input
                   className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
                   value={app?.led_small_top ?? ""}
                   onChange={(e) => updateTop.mutate(e.target.value)}
-                  placeholder="Top counter"
+                  placeholder="Écrire..."
                 />
               </div>
               <div className="card-surface p-4">
-                <div className="muted text-sm mb-1">Bottom Counter</div>
+                <div className="muted text-sm mb-1">
+                  Panneau secondaire de droite
+                </div>
                 <input
                   className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
                   value={app?.led_small_bottom ?? ""}
                   onChange={(e) => updateBottom.mutate(e.target.value)}
-                  placeholder="Bottom counter"
+                  placeholder="Écrire..."
                 />
               </div>
             </div>
@@ -57,13 +61,14 @@ export default function Dashboard() {
           <section className="space-y-6">
             <TokenCounter />
             <DayController />
-            <InventoryList />
             <div className="card-surface p-4">
-              <div className="display-title text-base mb-2">Shop Controls</div>
+              <div className="display-title text-base mb-2">
+                Contrôles des boutiques
+              </div>
               <div className="space-y-3 text-sm">
                 {[
-                  { label: "Shop 1", data: shop1 },
-                  { label: "Shop 2", data: shop2 },
+                  { label: "Boutique 1", data: shop1 },
+                  { label: "Boutique 2", data: shop2 },
                 ].map((s) => (
                   <div key={s.label} className="flex items-center gap-2">
                     <div className="w-20 muted">{s.label}</div>
@@ -79,25 +84,26 @@ export default function Dashboard() {
                           })
                         }
                       />
-                      Unlocked
+                      Déverrouillé
                     </label>
                   </div>
                 ))}
                 <div className="flex items-center gap-2 pt-2">
                   <button className="btn" onClick={() => setOpenModal("shop1")}>
-                    Manage Shop 1 Items
+                    Gérer les items de la boutique 1
                   </button>
                   <button className="btn" onClick={() => setOpenModal("shop2")}>
-                    Manage Shop 2 Items
+                    Gérer les items de la boutique 2
                   </button>
                 </div>
               </div>
             </div>
+            <InventoryList />
           </section>
         </div>
 
-        <div className="lg:col-span-2">
-          <h2 className="display-title text-lg mb-3">Players</h2>
+        <div className="lg:col-span-2 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto lg:min-h-0 pr-1">
+          <h2 className="display-title text-lg mb-3">Joueurs</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {(players ?? []).map((p) => (
               <PlayerCard key={p.id} player={p} />

@@ -20,15 +20,15 @@ export default function DayController() {
   return (
     <div className="card-surface p-4">
       <div className="flex items-center justify-between">
-        <div className="display-title text-base">Day</div>
-        <div className="text-2xl">Day {day}</div>
+        <div className="display-title text-base">Jour</div>
+        <div className="text-2xl">Jour {day}</div>
       </div>
       <div className="mt-3 flex gap-2">
         <button
           className="btn btn-primary"
           onClick={() => setConfirmOpen(true)}
         >
-          Advance Day
+          Avancer le jour
         </button>
         <button
           className="btn"
@@ -37,23 +37,23 @@ export default function DayController() {
             setEditOpen(true)
           }}
         >
-          Edit
+          Modifier
         </button>
       </div>
 
       <Modal
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        title="Confirm Day Advancement"
+        title="Confirmation d'avancement de jour"
       >
         <div className="space-y-3">
           <p className="text-sm muted">
-            Advancing the day will decrement hunger and thirst by 1 (min -2) and
-            reset action points to 2 for all players.
+            Avancer le jour diminuera la faim et la soif de 1 (min -2) et
+            réinitialisera les points d'action de tous les joueurs.
           </p>
           <div className="flex gap-2 justify-end">
             <button className="btn" onClick={() => setConfirmOpen(false)}>
-              Cancel
+              Annuler
             </button>
             <button
               className="btn btn-primary"
@@ -61,16 +61,17 @@ export default function DayController() {
                 setConfirmOpen(false)
                 advance.mutate(undefined, {
                   onSuccess: () =>
-                    show({ type: "success", message: "Day advanced" }),
+                    show({ type: "success", message: "Jour avancé" }),
                   onError: () =>
                     show({
                       type: "error",
-                      message: "Failed to advance day (queued if offline)",
+                      message:
+                        "Échec de l'avancement du jour (mis en file d'attente si hors ligne)",
                     }),
                 })
               }}
             >
-              Confirm
+              Confirmer
             </button>
           </div>
         </div>
@@ -79,7 +80,7 @@ export default function DayController() {
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        title="Edit Day"
+        title="Modifier le jour"
       >
         <div className="space-y-3">
           <input
@@ -90,7 +91,7 @@ export default function DayController() {
           />
           <div className="flex gap-2 justify-end">
             <button className="btn" onClick={() => setEditOpen(false)}>
-              Cancel
+              Annuler
             </button>
             <button
               className="btn btn-primary"
@@ -98,16 +99,17 @@ export default function DayController() {
                 setEditOpen(false)
                 updateDay.mutate(draftDay, {
                   onSuccess: () =>
-                    show({ type: "success", message: "Day set" }),
+                    show({ type: "success", message: "Jour défini" }),
                   onError: () =>
                     show({
                       type: "error",
-                      message: "Failed to set day (queued if offline)",
+                      message:
+                        "Échec de la définition du jour (mis en file d'attente si hors ligne)",
                     }),
                 })
               }}
             >
-              Save
+              Enregistrer
             </button>
           </div>
         </div>

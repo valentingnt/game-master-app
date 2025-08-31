@@ -4,7 +4,6 @@ import { useMessages, usePlayers } from "../lib/hooks"
 import {
   FiHeart,
   FiDroplet,
-  FiActivity,
   FiZap,
   FiBattery,
   FiUser,
@@ -18,9 +17,6 @@ import {
   FiFileText,
   FiStar,
   FiCalendar,
-  FiMaximize,
-  FiPackage,
-  FiSun,
 } from "react-icons/fi"
 import {
   RadarChart,
@@ -30,6 +26,9 @@ import {
   Radar,
   ResponsiveContainer,
 } from "recharts"
+import { MdOutlineFastfood } from "react-icons/md"
+import { RxHeight } from "react-icons/rx"
+import { LuWeight } from "react-icons/lu"
 
 export default function Player() {
   const params = useParams()
@@ -73,7 +72,7 @@ export default function Player() {
       )}
       <section className="card-surface p-5">
         {!player ? (
-          <div className="text-sm text-gray-400">Player not found.</div>
+          <div className="text-sm text-gray-400">Joueur non trouvé.</div>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -99,10 +98,6 @@ export default function Player() {
                   </div>
 
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="pill">
-                      <FiZap className="text-gray-300" /> AP{" "}
-                      {player.action_points}
-                    </span>
                     {player.age != null && (
                       <span className="pill">
                         <FiCalendar className="text-gray-300" />
@@ -111,13 +106,13 @@ export default function Player() {
                     )}
                     {player.size != null && (
                       <span className="pill">
-                        <FiMaximize className="text-gray-300" />
+                        <RxHeight className="text-gray-300" />
                         {player.size}
                       </span>
                     )}
                     {player.weight != null && (
                       <span className="pill">
-                        <FiPackage className="text-gray-300" />
+                        <LuWeight className="text-gray-300" />
                         {player.weight}
                       </span>
                     )}
@@ -129,7 +124,7 @@ export default function Player() {
                     )}
                     {player.astrological_sign && (
                       <span className="pill">
-                        <FiSun className="text-gray-300" />
+                        <FiStar className="text-gray-300" />
                         {player.astrological_sign}
                       </span>
                     )}
@@ -137,7 +132,7 @@ export default function Player() {
                 </div>
                 {player.is_dead && (
                   <div className="text-red-400 text-sm font-semibold tracking-widest">
-                    DEAD
+                    MORT
                   </div>
                 )}
               </div>
@@ -147,11 +142,11 @@ export default function Player() {
               {(() => {
                 const stats = [
                   { key: "orientation", label: "Orientation", Icon: FiCompass },
-                  { key: "strength", label: "Strength", Icon: FiStar },
-                  { key: "resistance", label: "Resistance", Icon: FiShield },
-                  { key: "charisma", label: "Charisma", Icon: FiSmile },
-                  { key: "agility", label: "Agility", Icon: FiWind },
-                  { key: "dexterity", label: "Dexterity", Icon: FiTool },
+                  { key: "strength", label: "Force", Icon: FiStar },
+                  { key: "resistance", label: "Résistance", Icon: FiShield },
+                  { key: "charisma", label: "Charisme", Icon: FiSmile },
+                  { key: "agility", label: "Agilité", Icon: FiWind },
+                  { key: "dexterity", label: "Dextérité", Icon: FiTool },
                   { key: "intuition", label: "Intuition", Icon: FiEye },
                 ] as const
                 const radarData = stats.map((s) => ({
@@ -178,14 +173,14 @@ export default function Player() {
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div className="card-surface p-3 col-span-2">
-                      <div className="muted mb-2">Core Stats</div>
-                      <div className="w-full h-80">
+                      <div className="muted mb-2">Statistiques</div>
+                      <div className="w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <RadarChart
                             data={radarData}
                             cx="50%"
                             cy="50%"
-                            outerRadius="90%"
+                            outerRadius="80%"
                           >
                             <PolarGrid
                               stroke="rgba(255,255,255,0.2)"
@@ -202,7 +197,7 @@ export default function Player() {
                               axisLine={false}
                             />
                             <Radar
-                              name="Stats"
+                              name="Statistiques"
                               dataKey="value"
                               stroke="#ffffff"
                               fill="#ffffff"
@@ -217,7 +212,7 @@ export default function Player() {
                       <div className="card-surface p-3">
                         <div className="muted mb-1 flex items-center gap-2">
                           <FiHeart className="text-gray-400" />
-                          <span>Health</span>
+                          <span>Santé</span>
                         </div>
                         <div className="progress">
                           <div className="progress-track">
@@ -240,8 +235,29 @@ export default function Player() {
                       </div>
                       <div className="card-surface p-3">
                         <div className="muted mb-1 flex items-center gap-2">
-                          <FiDroplet className="text-gray-400" />
-                          <span>Hunger</span>
+                          <FiZap className="text-gray-400" />
+                          <span>Points d'action</span>
+                        </div>
+                        <div className="progress">
+                          <div className="progress-track">
+                            <div
+                              className="progress-fill"
+                              style={{
+                                width: `${
+                                  (Math.max(0, player.action_points) / 2) * 100
+                                }%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-xs mt-1">
+                          {player.action_points} / 2
+                        </div>
+                      </div>
+                      <div className="card-surface p-3">
+                        <div className="muted mb-1 flex items-center gap-2">
+                          <MdOutlineFastfood className="text-gray-400" />
+                          <span>Faim</span>
                         </div>
                         <div className="zero-gauge">
                           <div className="zero-track" />
@@ -272,8 +288,8 @@ export default function Player() {
                       </div>
                       <div className="card-surface p-3">
                         <div className="muted mb-1 flex items-center gap-2">
-                          <FiActivity className="text-gray-400" />
-                          <span>Thirst</span>
+                          <FiDroplet className="text-gray-400" />
+                          <span>Soif</span>
                         </div>
                         <div className="zero-gauge">
                           <div className="zero-track" />
@@ -320,13 +336,13 @@ export default function Player() {
 
       {player && (
         <section className="card-surface p-5">
-          <div className="muted text-sm mb-2">Additional Information</div>
+          <div className="muted text-sm mb-2">Informations additionnelles</div>
           <div className="space-y-3 text-sm flex flex-col gap-2">
             {player.history && (
               <div>
                 <div className="muted flex items-center gap-2">
                   <FiBook className="text-gray-400" />
-                  <span>History</span>
+                  <span>Histoire</span>
                 </div>
                 <div className="whitespace-pre-wrap max-h-64 overflow-auto">
                   {player.history}
@@ -337,7 +353,7 @@ export default function Player() {
               <div>
                 <div className="muted flex items-center gap-2">
                   <FiFileText className="text-gray-400" />
-                  <span>Physical Description</span>
+                  <span>Description physique</span>
                 </div>
                 <div className="whitespace-pre-wrap max-h-64 overflow-auto">
                   {player.physical_description}
@@ -348,7 +364,7 @@ export default function Player() {
               <div>
                 <div className="muted flex items-center gap-2">
                   <FiStar className="text-gray-400" />
-                  <span>Character Traits</span>
+                  <span>Traits de caractère</span>
                 </div>
                 <div className="whitespace-pre-wrap max-h-64 overflow-auto">
                   {player.character_traits}
@@ -358,7 +374,9 @@ export default function Player() {
             {!player.history &&
               !player.physical_description &&
               !player.character_traits && (
-                <div className="text-gray-500">No additional information</div>
+                <div className="text-gray-500">
+                  Aucune information additionnelle
+                </div>
               )}
           </div>
         </section>

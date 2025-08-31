@@ -49,13 +49,13 @@ export default function TokenCounter() {
             setEditOpen(true)
           }}
         >
-          Edit
+          Modifier
         </button>
       </div>
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        title="Edit Tokens"
+        title="Modifier les tokens"
       >
         <div className="space-y-3">
           <input
@@ -66,7 +66,7 @@ export default function TokenCounter() {
           />
           <div className="flex gap-2 justify-end">
             <button className="btn" onClick={() => setEditOpen(false)}>
-              Cancel
+              Annuler
             </button>
             <button
               className="btn btn-primary"
@@ -75,16 +75,17 @@ export default function TokenCounter() {
                 setTokens(draftTokens)
                 updateTokens.mutate(draftTokens, {
                   onSuccess: () =>
-                    show({ type: "success", message: "Tokens updated" }),
+                    show({ type: "success", message: "Tokens mis à jour" }),
                   onError: () =>
                     show({
                       type: "error",
-                      message: "Failed to update tokens (queued if offline)",
+                      message:
+                        "Échec de la mise à jour des tokens (mis en file d'attente si hors ligne)",
                     }),
                 })
               }}
             >
-              Save
+              Enregistrer
             </button>
           </div>
         </div>

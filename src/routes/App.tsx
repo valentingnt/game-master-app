@@ -19,7 +19,7 @@ export default function App() {
                 }`
               }
             >
-              Shop 1
+              Boutique 1
             </NavLink>
             <NavLink
               to="/player/shop2"
@@ -31,7 +31,7 @@ export default function App() {
                 }`
               }
             >
-              Shop 2
+              Boutique 2
             </NavLink>
           </nav>
         </div>

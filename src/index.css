@@ -10,6 +10,12 @@ html,
 body,
 #root {
   height: 100%;
+  scrollbar-width: none;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-gutter: stable;
+  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .led-text {
@@ -67,6 +73,9 @@ h3,
 .btn {
   @apply px-3 py-1.5 rounded bg-white/15 hover:bg-white/20 text-gray-100 border border-white/10 interactive;
 }
+.btn:hover {
+  @apply opacity-90;
+}
 .btn-primary {
   @apply bg-gray-100 text-ink-900 hover:bg-white;
 }
@@ -74,13 +83,16 @@ h3,
   @apply bg-transparent hover:bg-white/15 text-gray-200;
 }
 
+/* Form controls color on dark surfaces */
+input,
+textarea,
+select {
+  @apply text-gray-100 placeholder-gray-400;
+}
+
 /* Shop animations */
 .shop-card {
-  @apply card-surface p-4 shadow-sm;
-  animation: fadeInUp 300ms ease-out both;
-}
-.shop-card:hover {
-  @apply shadow-glow;
+  @apply card-surface p-4;
 }
 
 /* Creative theme utilities */
@@ -152,14 +164,6 @@ h3,
 }
 .progress-fill {
   @apply h-full rounded bg-gray-100;
-}
-
-/* More creative surfaces */
-.card-hover {
-  @apply transition-all duration-200 ease-out;
-}
-.card-hover:hover {
-  @apply border-white/25 shadow-glow;
 }
 
 .badge {

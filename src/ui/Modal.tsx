@@ -54,7 +54,7 @@ export default function Modal({ open, title, onClose, children }: Props) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -64,11 +64,15 @@ export default function Modal({ open, title, onClose, children }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-lg card-surface p-4 shadow-xl"
+        className="w-full max-w-xl card-surface p-4 shadow-xl"
       >
         <div className="mb-3 flex items-center justify-between">
-          <div className="display-title text-base">{title}</div>
-          <button ref={firstFocusable} className="btn" onClick={onClose}>
+          <div className="display-title text-base text-gray-100">{title}</div>
+          <button
+            ref={firstFocusable}
+            className="btn btn-ghost"
+            onClick={onClose}
+          >
             Close
           </button>
         </div>
