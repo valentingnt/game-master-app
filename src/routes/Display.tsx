@@ -29,7 +29,7 @@ export default function Display() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="card-surface p-4 space-y-3">
+          <div className="card-surface p-4 space-y-3 self-start">
             <div className="display-title text-2xl">
               Jour <span className="font-mono">{app?.day ?? 0}</span>
             </div>
