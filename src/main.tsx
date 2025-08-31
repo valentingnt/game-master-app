@@ -35,7 +35,7 @@ const router = createBrowserRouter([
     path: "/player",
     element: <PlayerApp />,
     children: [
-      { path: "", element: <Shop shopId="shop1" /> },
+      { path: "", element: <Player /> },
       { path: "shop1", element: <Shop shopId="shop1" /> },
       { path: "shop2", element: <Shop shopId="shop2" /> },
       { path: ":id", element: <Player /> },
@@ -53,7 +53,7 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
-    children: [{ path: "", element: <Shop shopId="shop1" /> }],
+    children: [{ path: "", element: <Player /> }],
   },
 ])
 
