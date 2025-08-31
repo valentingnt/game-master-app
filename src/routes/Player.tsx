@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react"
 import { useParams } from "react-router-dom"
-import { usePlayers } from "../lib/hooks"
+import { useMessages, usePlayers } from "../lib/hooks"
 
 export default function Player() {
   const params = useParams()
@@ -20,8 +20,28 @@ export default function Player() {
     }
   }, [playerId])
 
+  const { data: messages } = useMessages()
+  const activeMessage = useMemo(() => {
+    const list = (messages ?? []).filter(
+      (m) =>
+        m.show &&
+        (m.target_player_id === playerId || m.target_player_id == null)
+    )
+    list.sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    return list[0] ?? null
+  }, [messages, playerId])
+
   return (
     <div className="space-y-6">
+      {activeMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
+          <div className="max-w-4xl px-6 text-center">
+            <div className="text-white font-mono tracking-widest text-3xl sm:text-5xl md:text-6xl leading-snug">
+              {activeMessage.content}
+            </div>
+          </div>
+        </div>
+      )}
       <section className="rounded border border-gray-800 p-4 bg-gray-900">
         <div className="font-semibold mb-3">Your Character</div>
         {!player ? (

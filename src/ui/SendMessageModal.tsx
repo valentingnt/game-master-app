@@ -1,0 +1,90 @@
+import { useMemo, useState } from "react"
+import Modal from "./Modal"
+import { usePlayers, useSendMessages } from "../lib/hooks"
+
+type Props = {
+  open: boolean
+  onClose: () => void
+}
+
+export default function SendMessageModal({ open, onClose }: Props) {
+  const { data: players } = usePlayers()
+  const send = useSendMessages()
+  const [content, setContent] = useState("")
+  const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [toAll, setToAll] = useState(true)
+
+  const allPlayerIds = useMemo(
+    () => (players ?? []).map((p) => p.id),
+    [players]
+  )
+
+  const toggle = (id: string) => {
+    setSelected((prev) => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const submit = async () => {
+    const ids = toAll
+      ? [null]
+      : Object.entries(selected)
+          .filter(([, v]) => v)
+          .map(([k]) => k)
+    if (ids.length === 0) return
+    await send.mutateAsync({ content: content.trim(), targetIds: ids })
+    setContent("")
+    setSelected({})
+    setToAll(true)
+    onClose()
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Send Message">
+      <div className="space-y-4">
+        <textarea
+          className="w-full min-h-[120px] bg-gray-800 rounded p-2"
+          placeholder="Type your message..."
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+        />
+        <div className="space-y-2">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={toAll}
+              onChange={(e) => setToAll(e.target.checked)}
+            />
+            Send to all players
+          </label>
+          {!toAll && (
+            <div className="max-h-48 overflow-auto rounded border border-gray-800 p-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                {(players ?? []).map((p) => (
+                  <label key={p.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!selected[p.id]}
+                      onChange={() => toggle(p.id)}
+                    />
+                    {p.first_name} {p.last_name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <button className="px-3 py-1.5 rounded bg-gray-800" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="px-3 py-1.5 rounded bg-blue-600 disabled:opacity-50"
+            disabled={content.trim().length === 0}
+            onClick={submit}
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    </Modal>
+  )
+}

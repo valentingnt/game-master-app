@@ -57,3 +57,11 @@ export type ShopItem = {
   bundle_quantity: number
   disabled?: boolean
 }
+
+export type Message = {
+  id: string
+  content: string
+  target_player_id: string | null
+  show: boolean
+  created_at: string
+}

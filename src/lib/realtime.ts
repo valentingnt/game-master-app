@@ -53,3 +53,14 @@ export function subscribeShops(qc: QueryClient) {
     .subscribe()
   return { shop, items }
 }
+
+export function subscribeMessages(qc: QueryClient) {
+  return supabase
+    .channel("messages_changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "messages" },
+      () => qc.invalidateQueries({ queryKey: ["messages"] })
+    )
+    .subscribe()
+}

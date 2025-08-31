@@ -5,6 +5,7 @@ import InventoryList from "../ui/InventoryList"
 import PlayerCard from "../ui/PlayerCard"
 import { usePlayers, useShop, useToggleShopUnlock } from "../lib/hooks"
 import ShopItemsModal from "../ui/ShopItemsModal"
+import MessageHistory from "../ui/MessageHistory"
 import { useState } from "react"
 
 export default function Dashboard() {
@@ -88,6 +89,9 @@ export default function Dashboard() {
             {(players ?? []).map((p) => (
               <PlayerCard key={p.id} player={p} />
             ))}
+          </div>
+          <div className="mt-6">
+            <MessageHistory />
           </div>
         </div>
       </div>

@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "./supabaseClient"
-import type { AppState, InventoryItem, Player, Shop, ShopItem } from "./types"
+import type {
+  AppState,
+  InventoryItem,
+  Player,
+  Shop,
+  ShopItem,
+  Message,
+} from "./types"
 import { enqueue, registerHandler } from "./offlineQueue"
 
 // Shared helpers
@@ -147,6 +154,126 @@ export function useAdvanceDay() {
       qc.invalidateQueries({ queryKey: ["app_state"] })
       qc.invalidateQueries({ queryKey: ["players"] })
     },
+  })
+}
+
+// Messages
+export function useMessages() {
+  return useQuery({
+    queryKey: ["messages"],
+    queryFn: async (): Promise<Message[]> => {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .order("created_at", { ascending: false })
+      if (error) throw error
+      return (data ?? []) as Message[]
+    },
+    staleTime: 5_000,
+  })
+}
+
+export function useSendMessages() {
+  const qc = useQueryClient()
+  registerHandler("sendMessages", async (varsAny: unknown) => {
+    const vars = varsAny as { content: string; targetIds: (string | null)[] }
+    const rows = vars.targetIds.map((tid) => ({
+      content: vars.content,
+      target_player_id: tid,
+      show: true,
+    }))
+    const { error } = await supabase.from("messages").insert(rows as any)
+    if (error) throw error
+  })
+  return useMutation({
+    mutationFn: async ({
+      content,
+      targetIds,
+    }: {
+      content: string
+      targetIds: (string | null)[]
+    }) => {
+      const rows = targetIds.map((tid) => ({
+        content,
+        target_player_id: tid,
+        show: true,
+      }))
+      const { error } = await supabase.from("messages").insert(rows as any)
+      if (error) throw error
+    },
+    onMutate: async ({ content, targetIds }) => {
+      await qc.cancelQueries({ queryKey: ["messages"] })
+      const prev = qc.getQueryData<Message[]>(["messages"]) ?? []
+      const optimistic: Message[] = targetIds.map((tid) => ({
+        id: `optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        content,
+        target_player_id: tid,
+        show: true,
+        created_at: new Date().toISOString(),
+      }))
+      qc.setQueryData(["messages"], [...optimistic, ...prev])
+      return { prev }
+    },
+    onError: async (_e, vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["messages"], ctx.prev)
+      await enqueue({
+        key: "sendMessages",
+        payload: vars,
+        run: async () => {
+          const rows = vars.targetIds.map((tid) => ({
+            content: vars.content,
+            target_player_id: tid,
+            show: true,
+          }))
+          const { error } = await supabase.from("messages").insert(rows as any)
+          if (error) throw error
+        },
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["messages"] }),
+  })
+}
+
+export function useToggleMessageVisibility() {
+  const qc = useQueryClient()
+  registerHandler("toggleMessageVisibility", async (varsAny: unknown) => {
+    const vars = varsAny as { id: string; show: boolean }
+    const { error } = await supabase
+      .from("messages")
+      .update({ show: vars.show })
+      .eq("id", vars.id)
+    if (error) throw error
+  })
+  return useMutation({
+    mutationFn: async ({ id, show }: { id: string; show: boolean }) => {
+      const { error } = await supabase
+        .from("messages")
+        .update({ show })
+        .eq("id", id)
+      if (error) throw error
+    },
+    onMutate: async ({ id, show }) => {
+      await qc.cancelQueries({ queryKey: ["messages"] })
+      const prev = qc.getQueryData<Message[]>(["messages"]) ?? []
+      const next = prev.map((m) => (m.id === id ? { ...m, show } : m))
+      qc.setQueryData(["messages"], next)
+      return { prev }
+    },
+    onError: async (_e, vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["messages"], ctx.prev)
+      await enqueue({
+        key: "toggleMessageVisibility",
+        payload: vars,
+        run: async () => {
+          const { error } = await supabase
+            .from("messages")
+            .update({ show: vars.show })
+            .eq("id", vars.id)
+          if (error) throw error
+        },
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["messages"] }),
   })
 }
 
