@@ -41,8 +41,13 @@ export default function Display() {
           <div className="lg:col-span-2 card-surface p-4">
             <div className="display-title text-2xl mb-3">Inventaire</div>
             <ul className="space-y-2">
-              {(inv ?? []).map((it) => (
-                <li key={it.id} className="flex items-center gap-2">
+              {(inv ?? []).map((it, index) => (
+                <li
+                  key={it.id}
+                  className={`flex items-center gap-2 p-2 rounded ${
+                    index % 2 === 0 ? "bg-white/10" : "bg-black/30"
+                  }`}
+                >
                   <div className="flex-1 truncate text-xl">{it.item_name}</div>
                   <div className="w-16 text-right text-xl">{it.quantity}</div>
                 </li>
