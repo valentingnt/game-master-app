@@ -6,7 +6,7 @@ export default function Display() {
   const { data: inv } = useInventory()
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen app-surface">
       <main className="px-4 py-6 space-y-6">
         <section>
           <LEDDisplay
@@ -29,15 +29,15 @@ export default function Display() {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="rounded border border-gray-800 p-4 bg-gray-900 space-y-3">
-            <div className="font-semibold">Day</div>
+          <div className="card-surface p-4 space-y-3">
+            <div className="display-title text-base">Day</div>
             <div className="text-2xl">Day {app?.day ?? 0}</div>
-            <div className="font-semibold mt-4">Tokens</div>
+            <div className="display-title text-base mt-4">Tokens</div>
             <div className="text-2xl">{app?.tokens ?? 0}</div>
           </div>
 
-          <div className="lg:col-span-2 rounded border border-gray-800 p-4 bg-gray-900">
-            <div className="font-semibold mb-3">Inventory</div>
+          <div className="lg:col-span-2 card-surface p-4">
+            <div className="display-title text-base mb-3">Inventory</div>
             <ul className="space-y-2">
               {(inv ?? []).map((it) => (
                 <li key={it.id} className="flex items-center gap-2">
@@ -46,7 +46,7 @@ export default function Display() {
                 </li>
               ))}
               {(!inv || inv.length === 0) && (
-                <li className="text-sm text-gray-400">No items</li>
+                <li className="text-sm muted">No items</li>
               )}
             </ul>
           </div>

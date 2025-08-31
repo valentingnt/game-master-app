@@ -56,7 +56,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 ? "bg-red-900/30 border-red-700 text-red-200"
                 : t.type === "success"
                 ? "bg-green-900/30 border-green-700 text-green-200"
-                : "bg-gray-900/80 border-gray-700 text-gray-100"
+                : "bg-ink-900/80 border-white/15 text-gray-100"
             }`}
           >
             {t.title && <div className="font-semibold mb-0.5">{t.title}</div>}

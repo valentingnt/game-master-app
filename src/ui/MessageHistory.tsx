@@ -19,13 +19,10 @@ export default function MessageHistory() {
   }, [players])
 
   return (
-    <div className="rounded border border-gray-800 p-4 bg-gray-900">
+    <div className="card-surface p-4">
       <div className="flex items-center justify-between mb-3">
-        <div className="font-semibold">Messages</div>
-        <button
-          className="px-3 py-1.5 rounded bg-gray-800"
-          onClick={() => setOpen(true)}
-        >
+        <div className="display-title text-base">Messages</div>
+        <button className="btn" onClick={() => setOpen(true)}>
           New
         </button>
       </div>
@@ -36,9 +33,7 @@ export default function MessageHistory() {
             className="flex items-start justify-between gap-3 text-sm"
           >
             <div className="flex-1">
-              <div className="text-gray-300 whitespace-pre-wrap">
-                {m.content}
-              </div>
+              <div className="muted whitespace-pre-wrap">{m.content}</div>
               <div className="text-xs text-gray-500 mt-1">
                 Target:{" "}
                 {m.target_player_id
@@ -59,11 +54,10 @@ export default function MessageHistory() {
           </div>
         ))}
         {(!messages || messages.length === 0) && (
-          <div className="text-sm text-gray-400">No messages yet.</div>
+          <div className="text-sm muted">No messages yet.</div>
         )}
       </div>
       {open && <SendMessageModal open={open} onClose={() => setOpen(false)} />}
     </div>
   )
 }
-

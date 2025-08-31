@@ -66,29 +66,26 @@ export default function DashboardApp() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen app-surface">
       <main className="px-4 py-6">
         {!authed ? (
           <div className="min-h-[60vh] flex items-center justify-center">
             <form
               onSubmit={onSubmit}
-              className="w-full max-w-sm rounded border border-gray-800 p-6 bg-gray-900 space-y-4"
+              className="w-full max-w-sm card-surface p-6 space-y-4"
             >
-              <div className="text-lg font-semibold">
+              <div className="display-title text-lg">
                 Enter Dashboard Password
               </div>
               <input
                 type="password"
-                className="w-full bg-gray-800 rounded px-3 py-2"
+                className="w-full bg-white/10 border border-white/10 rounded px-3 py-2"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
               />
               {error && <div className="text-sm text-red-400">{error}</div>}
-              <button
-                type="submit"
-                className="w-full px-3 py-2 rounded bg-blue-600 hover:bg-blue-500"
-              >
+              <button type="submit" className="w-full btn btn-primary">
                 Unlock
               </button>
               {!required && (
@@ -102,10 +99,7 @@ export default function DashboardApp() {
         ) : (
           <div className="space-y-4">
             <div className="flex justify-end">
-              <button
-                className="px-3 py-1.5 rounded bg-gray-800"
-                onClick={logout}
-              >
+              <button className="btn" onClick={logout}>
                 Lock
               </button>
             </div>

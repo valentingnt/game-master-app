@@ -16,14 +16,14 @@ export default function TokenCounter() {
   }, [data?.tokens])
 
   return (
-    <div className="rounded border border-gray-800 p-4 bg-gray-900">
+    <div className="card-surface p-4">
       <div className="flex items-center justify-between">
-        <div className="font-semibold">Tokens</div>
+        <div className="display-title text-base">Tokens</div>
         <div className="text-2xl">{tokens}</div>
       </div>
       <div className="mt-3 flex gap-2">
         <button
-          className="px-3 py-1.5 rounded bg-gray-800"
+          className="btn"
           onClick={() => {
             const next = Math.max(0, tokens - 1)
             setTokens(next)
@@ -33,7 +33,7 @@ export default function TokenCounter() {
           -
         </button>
         <button
-          className="px-3 py-1.5 rounded bg-gray-800"
+          className="btn"
           onClick={() => {
             const next = tokens + 1
             setTokens(next)
@@ -43,7 +43,7 @@ export default function TokenCounter() {
           +
         </button>
         <button
-          className="px-3 py-1.5 rounded bg-gray-800"
+          className="btn"
           onClick={() => {
             setDraftTokens(tokens)
             setEditOpen(true)
@@ -60,19 +60,16 @@ export default function TokenCounter() {
         <div className="space-y-3">
           <input
             type="number"
-            className="w-full bg-gray-800 rounded px-2 py-1"
+            className="w-full bg-white/10 border border-white/10 rounded px-2 py-1"
             value={draftTokens}
             onChange={(e) => setDraftTokens(Number(e.target.value || 0))}
           />
           <div className="flex gap-2 justify-end">
-            <button
-              className="px-3 py-1.5 rounded bg-gray-800"
-              onClick={() => setEditOpen(false)}
-            >
+            <button className="btn" onClick={() => setEditOpen(false)}>
               Cancel
             </button>
             <button
-              className="px-3 py-1.5 rounded bg-blue-600"
+              className="btn btn-primary"
               onClick={() => {
                 setEditOpen(false)
                 setTokens(draftTokens)

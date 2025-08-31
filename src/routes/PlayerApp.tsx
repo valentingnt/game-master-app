@@ -8,7 +8,7 @@ export default function PlayerApp() {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-gray-300 animate-pulse-soft" />
             <span className="display-title text-sm uppercase tracking-widest text-gray-300">
-              Game Terminal
+              Terminal
             </span>
           </div>
           <nav className="flex items-center gap-2">

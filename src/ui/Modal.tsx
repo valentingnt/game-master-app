@@ -64,15 +64,11 @@ export default function Modal({ open, title, onClose, children }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-lg rounded border border-gray-700 bg-gray-900 p-4 shadow-xl"
+        className="w-full max-w-lg card-surface p-4 shadow-xl"
       >
         <div className="mb-3 flex items-center justify-between">
-          <div className="font-semibold">{title}</div>
-          <button
-            ref={firstFocusable}
-            className="px-2 py-1 rounded bg-gray-800"
-            onClick={onClose}
-          >
+          <div className="display-title text-base">{title}</div>
+          <button ref={firstFocusable} className="btn" onClick={onClose}>
             Close
           </button>
         </div>

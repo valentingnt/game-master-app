@@ -88,4 +88,3 @@ export default function SendMessageModal({ open, onClose }: Props) {
     </Modal>
   )
 }
-

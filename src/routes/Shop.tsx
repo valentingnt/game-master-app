@@ -104,7 +104,7 @@ export default function Shop({ shopId }: Props) {
                 title="Confirm Purchase"
               >
                 <div className="space-y-3">
-                  <div className="text-sm text-gray-300">
+                  <div className="text-sm muted">
                     Buy{" "}
                     {it.bundle_quantity > 1 ? `${it.bundle_quantity}x ` : ""}
                     {it.name} for {it.price} tokens?

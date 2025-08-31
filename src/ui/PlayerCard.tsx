@@ -87,7 +87,7 @@ export default function PlayerCard({ player: p }: Props) {
   }
 
   return (
-    <div className="rounded border border-gray-800 p-4 bg-gray-900 w-full">
+    <div className="card-surface p-4 w-full">
       <div className="flex items-center gap-3">
         {normalizeAvatarUrl(p.avatar_url) ? (
           <img
@@ -105,9 +105,9 @@ export default function PlayerCard({ player: p }: Props) {
           />
         )}
         <div className="flex-1">
-          <div className="font-semibold grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="display-title text-base grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input
-              className="bg-gray-800 rounded px-2 py-1 w-full"
+              className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
               value={p.first_name}
               onChange={(e) =>
                 update.mutate({
@@ -118,7 +118,7 @@ export default function PlayerCard({ player: p }: Props) {
               }
             />
             <input
-              className="bg-gray-800 rounded px-2 py-1 w-full"
+              className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
               value={p.last_name}
               onChange={(e) =>
                 update.mutate({
@@ -145,10 +145,7 @@ export default function PlayerCard({ player: p }: Props) {
           />
           Dead
         </label>
-        <button
-          className="ml-2 px-2 py-1 rounded bg-gray-800 text-xs"
-          onClick={copyLink}
-        >
+        <button className="ml-2 btn text-xs" onClick={copyLink}>
           Copy Link
         </button>
       </div>
@@ -157,7 +154,7 @@ export default function PlayerCard({ player: p }: Props) {
         <label className="text-xs text-gray-400">Avatar URL</label>
         <div className="mt-1 flex items-center gap-2">
           <input
-            className="flex-1 bg-gray-800 rounded px-2 py-1"
+            className="flex-1 bg-white/10 border border-white/10 rounded px-2 py-1"
             value={p.avatar_url ?? ""}
             onChange={(e) =>
               update.mutate({
@@ -174,7 +171,7 @@ export default function PlayerCard({ player: p }: Props) {
             }}
             placeholder="https://..."
           />
-          <label className="px-2 py-1 rounded bg-gray-800 cursor-pointer text-xs">
+          <label className="px-2 py-1 rounded bg-white/10 border border-white/10 cursor-pointer text-xs">
             Upload
             <input
               type="file"
@@ -205,7 +202,7 @@ export default function PlayerCard({ player: p }: Props) {
           </label>
           {p.avatar_url && (
             <button
-              className="px-2 py-1 rounded bg-gray-800 text-xs"
+              className="btn text-xs"
               onClick={() => {
                 clearAvatar.mutate(
                   { id: p.id, url: p.avatar_url },
@@ -225,12 +222,12 @@ export default function PlayerCard({ player: p }: Props) {
       </div>
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-        <div className="bg-gray-800 rounded p-2">
+        <div className="bg-white/10 border border-white/10 rounded p-2">
           <div className="text-gray-400">HP</div>
           <div className="flex items-center gap-2">
             <input
               type="number"
-              className="w-24 bg-gray-900 rounded px-1"
+              className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
               value={Math.min(p.hp_current, p.hp_max)}
               onChange={(e) => {
                 const raw = Number(e.target.value || 0)
@@ -244,7 +241,7 @@ export default function PlayerCard({ player: p }: Props) {
             <span>/</span>
             <input
               type="number"
-              className="w-24 bg-gray-900 rounded px-1"
+              className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
               value={p.hp_max}
               onChange={(e) => {
                 const nextMax = Number(e.target.value || 0)
@@ -263,12 +260,12 @@ export default function PlayerCard({ player: p }: Props) {
             />
           </div>
         </div>
-        <div className="bg-gray-800 rounded p-2">
+        <div className="bg-white/10 border border-white/10 rounded p-2">
           <div className="text-gray-400">Action</div>
           <div className="flex items-center gap-2">
             <input
               type="number"
-              className="w-24 bg-gray-900 rounded px-1"
+              className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
               value={p.action_points}
               onChange={(e) =>
                 update.mutate({
@@ -281,11 +278,11 @@ export default function PlayerCard({ player: p }: Props) {
             <span className="text-xs text-gray-400">/ 2</span>
           </div>
         </div>
-        <div className="bg-gray-800 rounded p-2">
+        <div className="bg-white/10 border border-white/10 rounded p-2">
           <div className="text-gray-400">Fatigue</div>
           <input
             type="number"
-            className="w-24 bg-gray-900 rounded px-1"
+            className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
             value={p.fatigue}
             onChange={(e) =>
               update.mutate({
@@ -299,12 +296,12 @@ export default function PlayerCard({ player: p }: Props) {
       </div>
 
       <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-        <div className="bg-gray-800 rounded p-2">
+        <div className="bg-white/10 border border-white/10 rounded p-2">
           <div className="text-gray-400">Hunger</div>
           <div className="flex items-center gap-2">
             <input
               type="number"
-              className="w-24 bg-gray-900 rounded px-1"
+              className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
               value={p.hunger}
               onChange={(e) => {
                 const val = Number(e.target.value || 0)
@@ -313,7 +310,7 @@ export default function PlayerCard({ player: p }: Props) {
               }}
             />
             <button
-              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
               onClick={() =>
                 update.mutate({
                   id: p.id,
@@ -325,7 +322,7 @@ export default function PlayerCard({ player: p }: Props) {
               +1
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
               onClick={() =>
                 update.mutate({
                   id: p.id,
@@ -338,12 +335,12 @@ export default function PlayerCard({ player: p }: Props) {
             </button>
           </div>
         </div>
-        <div className="bg-gray-800 rounded p-2">
+        <div className="bg-white/10 border border-white/10 rounded p-2">
           <div className="text-gray-400">Thirst</div>
           <div className="flex items-center gap-2">
             <input
               type="number"
-              className="w-24 bg-gray-900 rounded px-1"
+              className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
               value={p.thirst}
               onChange={(e) => {
                 const val = Number(e.target.value || 0)
@@ -352,7 +349,7 @@ export default function PlayerCard({ player: p }: Props) {
               }}
             />
             <button
-              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
               onClick={() =>
                 update.mutate({
                   id: p.id,
@@ -364,7 +361,7 @@ export default function PlayerCard({ player: p }: Props) {
               +1
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              className="px-2 py-1 bg-white/15 border border-white/15 rounded text-xs"
               onClick={() =>
                 update.mutate({
                   id: p.id,
@@ -377,10 +374,10 @@ export default function PlayerCard({ player: p }: Props) {
             </button>
           </div>
         </div>
-        <div className="bg-gray-800 rounded p-2">
+        <div className="bg-white/10 border border-white/10 rounded p-2">
           <div className="text-gray-400">AP Reset</div>
           <button
-            className="px-2 py-1 bg-blue-600 rounded"
+            className="btn btn-primary"
             onClick={() =>
               update.mutate({ id: p.id, field: "action_points", value: 2 })
             }
@@ -402,11 +399,14 @@ export default function PlayerCard({ player: p }: Props) {
             { key: "dexterity", label: "Dexterity" },
             { key: "intuition", label: "Intuition" },
           ].map((s) => (
-            <div key={s.key} className="bg-gray-800 rounded p-2">
+            <div
+              key={s.key}
+              className="bg-white/10 border border-white/10 rounded p-2"
+            >
               <div className="text-gray-400">{s.label}</div>
               <input
                 type="number"
-                className="w-24 bg-gray-900 rounded px-1"
+                className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
                 value={(p as any)[s.key] as number}
                 onChange={(e) =>
                   update.mutate({

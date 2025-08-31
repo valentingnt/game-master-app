@@ -22,6 +22,14 @@ import {
   FiPackage,
   FiSun,
 } from "react-icons/fi"
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ResponsiveContainer,
+} from "recharts"
 
 export default function Player() {
   const params = useParams()
@@ -126,11 +134,6 @@ export default function Player() {
                       </span>
                     )}
                   </div>
-                  <div className="mt-4 inline-flex items-center gap-2 text-s">
-                    <FiBattery className="text-gray-300" />
-                    <span className="muted">Fatigue</span>
-                    <span className="text-gray-200">{player.fatigue}</span>
-                  </div>
                 </div>
                 {player.is_dead && (
                   <div className="text-red-400 text-sm font-semibold tracking-widest">
@@ -138,92 +141,11 @@ export default function Player() {
                   </div>
                 )}
               </div>
-              <div className="space-y-2">
-                <div className="card-surface p-3">
-                  <div className="muted mb-1 flex items-center gap-2">
-                    <FiHeart className="text-gray-400" />
-                    <span>HP</span>
-                  </div>
-                  <div className="progress">
-                    <div className="progress-track">
-                      <div
-                        className="progress-fill"
-                        style={{
-                          width: `${
-                            (Math.min(player.hp_current, player.hp_max) /
-                              Math.max(player.hp_max, 1)) *
-                            100
-                          }%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="text-xs mt-1">
-                    {Math.min(player.hp_current, player.hp_max)} /{" "}
-                    {player.hp_max}
-                  </div>
-                </div>
-                <div className="card-surface p-3">
-                  <div className="muted mb-1 flex items-center gap-2">
-                    <FiDroplet className="text-gray-400" />
-                    <span>Hunger</span>
-                  </div>
-                  <div className="zero-gauge">
-                    <div className="zero-track" />
-                    <div className="zero-center" />
-                    <div
-                      className="zero-fill zero-fill-pos"
-                      style={{
-                        width: `${(Math.max(0, player.hunger) / 2) * 50}%`,
-                      }}
-                    />
-                    <div
-                      className="zero-fill zero-fill-neg"
-                      style={{
-                        width: `${
-                          (Math.max(0, Math.abs(Math.min(player.hunger, 0))) /
-                            2) *
-                          50
-                        }%`,
-                      }}
-                    />
-                  </div>
-                  <div className="text-xs mt-1">{player.hunger}</div>
-                </div>
-                <div className="card-surface p-3">
-                  <div className="muted mb-1 flex items-center gap-2">
-                    <FiActivity className="text-gray-400" />
-                    <span>Thirst</span>
-                  </div>
-                  <div className="zero-gauge">
-                    <div className="zero-track" />
-                    <div className="zero-center" />
-                    <div
-                      className="zero-fill zero-fill-pos"
-                      style={{
-                        width: `${(Math.max(0, player.thirst) / 2) * 50}%`,
-                      }}
-                    />
-                    <div
-                      className="zero-fill zero-fill-neg"
-                      style={{
-                        width: `${
-                          (Math.max(0, Math.abs(Math.min(player.thirst, 0))) /
-                            2) *
-                          50
-                        }%`,
-                      }}
-                    />
-                  </div>
-                  <div className="text-xs mt-1">{player.thirst}</div>
-                </div>
-              </div>
             </div>
 
             <div className="mt-4">
-              <div className="muted text-sm mb-2">Core Stats</div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                {[
+              {(() => {
+                const stats = [
                   { key: "orientation", label: "Orientation", Icon: FiCompass },
                   { key: "strength", label: "Strength", Icon: FiStar },
                   { key: "resistance", label: "Resistance", Icon: FiShield },
@@ -231,18 +153,166 @@ export default function Player() {
                   { key: "agility", label: "Agility", Icon: FiWind },
                   { key: "dexterity", label: "Dexterity", Icon: FiTool },
                   { key: "intuition", label: "Intuition", Icon: FiEye },
-                ].map((s) => (
-                  <div key={s.key} className="card-surface p-3">
-                    <div className="muted mb-1 flex items-center gap-2">
-                      <s.Icon className="text-gray-400" />
-                      <span>{s.label}</span>
+                ] as const
+                const radarData = stats.map((s) => ({
+                  stat: s.label,
+                  value: (player as any)[s.key] as number,
+                }))
+                const maxVal = Math.max(...radarData.map((d) => d.value))
+                const renderTick =
+                  (data: { stat: string; value: number }[]) => (props: any) => {
+                    const { x, y, payload, textAnchor } = props
+                    const item = data.find((d) => d.stat === payload.value)
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        textAnchor={textAnchor}
+                        fill="#e5e7eb"
+                        fontSize={11}
+                      >
+                        {payload.value} ({item?.value ?? ""})
+                      </text>
+                    )
+                  }
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="card-surface p-3 col-span-2">
+                      <div className="muted mb-2">Core Stats</div>
+                      <div className="w-full h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart
+                            data={radarData}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius="90%"
+                          >
+                            <PolarGrid
+                              stroke="rgba(255,255,255,0.2)"
+                              radialLines={true}
+                            />
+                            <PolarAngleAxis
+                              dataKey="stat"
+                              tick={renderTick(radarData)}
+                            />
+                            <PolarRadiusAxis
+                              domain={[0, maxVal]}
+                              tick={false}
+                              tickCount={6}
+                              axisLine={false}
+                            />
+                            <Radar
+                              name="Stats"
+                              dataKey="value"
+                              stroke="#ffffff"
+                              fill="#ffffff"
+                              fillOpacity={0.3}
+                              isAnimationActive={false}
+                            />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                    <div className="text-lg">
-                      {(player as any)[s.key] as number}
+                    <div className="flex flex-col gap-3 text-sm col-span-2 md:col-span-1">
+                      <div className="card-surface p-3">
+                        <div className="muted mb-1 flex items-center gap-2">
+                          <FiHeart className="text-gray-400" />
+                          <span>Health</span>
+                        </div>
+                        <div className="progress">
+                          <div className="progress-track">
+                            <div
+                              className="progress-fill"
+                              style={{
+                                width: `${
+                                  (Math.min(player.hp_current, player.hp_max) /
+                                    Math.max(player.hp_max, 1)) *
+                                  100
+                                }%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-xs mt-1">
+                          {Math.min(player.hp_current, player.hp_max)} /{" "}
+                          {player.hp_max}
+                        </div>
+                      </div>
+                      <div className="card-surface p-3">
+                        <div className="muted mb-1 flex items-center gap-2">
+                          <FiDroplet className="text-gray-400" />
+                          <span>Hunger</span>
+                        </div>
+                        <div className="zero-gauge">
+                          <div className="zero-track" />
+                          <div className="zero-center" />
+                          <div
+                            className="zero-fill zero-fill-pos"
+                            style={{
+                              width: `${
+                                (Math.max(0, player.hunger) / 2) * 50
+                              }%`,
+                            }}
+                          />
+                          <div
+                            className="zero-fill zero-fill-neg"
+                            style={{
+                              width: `${
+                                (Math.max(
+                                  0,
+                                  Math.abs(Math.min(player.hunger, 0))
+                                ) /
+                                  2) *
+                                50
+                              }%`,
+                            }}
+                          />
+                        </div>
+                        <div className="text-xs mt-1">{player.hunger}</div>
+                      </div>
+                      <div className="card-surface p-3">
+                        <div className="muted mb-1 flex items-center gap-2">
+                          <FiActivity className="text-gray-400" />
+                          <span>Thirst</span>
+                        </div>
+                        <div className="zero-gauge">
+                          <div className="zero-track" />
+                          <div className="zero-center" />
+                          <div
+                            className="zero-fill zero-fill-pos"
+                            style={{
+                              width: `${
+                                (Math.max(0, player.thirst) / 2) * 50
+                              }%`,
+                            }}
+                          />
+                          <div
+                            className="zero-fill zero-fill-neg"
+                            style={{
+                              width: `${
+                                (Math.max(
+                                  0,
+                                  Math.abs(Math.min(player.thirst, 0))
+                                ) /
+                                  2) *
+                                50
+                              }%`,
+                            }}
+                          />
+                        </div>
+                        <div className="text-xs mt-1">{player.thirst}</div>
+                      </div>
+                      <div className="card-surface p-3">
+                        <div className="muted mb-1 flex items-center gap-2">
+                          <FiBattery className="text-gray-400" />
+                          <span>Fatigue</span>
+                        </div>
+                        <div className="text-lg">{player.fatigue}</div>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                )
+              })()}
             </div>
           </div>
         )}

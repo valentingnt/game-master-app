@@ -31,10 +31,10 @@ export default function InventoryList() {
   const removeItem = (id: string) => del.mutate({ id })
 
   return (
-    <div className="rounded border border-gray-800 p-4 bg-gray-900">
+    <div className="card-surface p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="font-semibold">Inventory</div>
-        <button className="px-2 py-1 rounded bg-gray-800" onClick={addItem}>
+        <div className="display-title text-base">Inventory</div>
+        <button className="btn" onClick={addItem}>
           Add
         </button>
       </div>
@@ -43,10 +43,7 @@ export default function InventoryList() {
           <li key={it.id} className="flex items-center gap-2">
             <div className="flex-1 truncate">{it.item_name}</div>
             <div className="w-16 text-right">{it.quantity}</div>
-            <button
-              className="px-2 py-1 rounded bg-gray-800"
-              onClick={() => openEdit(it.id)}
-            >
+            <button className="btn" onClick={() => openEdit(it.id)}>
               Edit
             </button>
           </li>
@@ -60,13 +57,13 @@ export default function InventoryList() {
       >
         <div className="space-y-3">
           <input
-            className="w-full bg-gray-800 rounded px-2 py-1"
+            className="w-full bg-white/10 border border-white/10 rounded px-2 py-1"
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
           />
           <input
             type="number"
-            className="w-full bg-gray-800 rounded px-2 py-1"
+            className="w-full bg-white/10 border border-white/10 rounded px-2 py-1"
             value={draftQty}
             onChange={(e) => setDraftQty(Number(e.target.value || 0))}
           />
@@ -92,14 +89,11 @@ export default function InventoryList() {
             >
               Remove
             </button>
-            <button
-              className="px-3 py-1.5 rounded bg-gray-800"
-              onClick={() => setEditId(null)}
-            >
+            <button className="btn" onClick={() => setEditId(null)}>
               Cancel
             </button>
             <button
-              className="px-3 py-1.5 rounded bg-blue-600"
+              className="btn btn-primary"
               onClick={() => {
                 if (!editId) return
                 upsert.mutate(

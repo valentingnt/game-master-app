@@ -57,12 +57,12 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-gray-900 border border-gray-700 rounded shadow-xl w-full max-w-2xl p-4">
+      <div className="card-surface w-full max-w-2xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="font-semibold">
+          <div className="display-title text-base">
             Manage Items – {shopSlug.toUpperCase()}
           </div>
-          <button className="px-2 py-1 rounded bg-gray-800" onClick={onClose}>
+          <button className="btn" onClick={onClose}>
             Close
           </button>
         </div>
@@ -71,7 +71,7 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
           {items.map((it) => (
             <div key={it.id} className="grid grid-cols-12 gap-2 items-center">
               <input
-                className="col-span-5 bg-gray-800 rounded px-2 py-1"
+                className="col-span-5 bg-white/10 border border-white/10 rounded px-2 py-1"
                 value={drafts[it.id]?.name ?? it.name}
                 onChange={(e) =>
                   setDrafts((d) => ({
@@ -102,7 +102,7 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
               />
               <input
                 type="number"
-                className="col-span-3 bg-gray-800 rounded px-2 py-1"
+                className="col-span-3 bg-white/10 border border-white/10 rounded px-2 py-1"
                 value={drafts[it.id]?.price ?? it.price}
                 onChange={(e) =>
                   setDrafts((d) => ({
@@ -133,7 +133,7 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
               />
               <input
                 type="number"
-                className="col-span-2 bg-gray-800 rounded px-2 py-1"
+                className="col-span-2 bg-white/10 border border-white/10 rounded px-2 py-1"
                 value={drafts[it.id]?.bundle_quantity ?? it.bundle_quantity}
                 onChange={(e) =>
                   setDrafts((d) => ({
@@ -205,30 +205,30 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
         </div>
 
         <div className="mt-4 border-t border-gray-800 pt-3">
-          <div className="text-sm text-gray-400 mb-2">Add Item</div>
+          <div className="text-sm muted mb-2">Add Item</div>
           <div className="grid grid-cols-12 gap-2 items-center">
             <input
-              className="col-span-5 bg-gray-800 rounded px-2 py-1"
+              className="col-span-5 bg-white/10 border border-white/10 rounded px-2 py-1"
               placeholder="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
             <input
               type="number"
-              className="col-span-3 bg-gray-800 rounded px-2 py-1"
+              className="col-span-3 bg-white/10 border border-white/10 rounded px-2 py-1"
               placeholder="Price"
               value={price}
               onChange={(e) => setPrice(Number(e.target.value || 0))}
             />
             <input
               type="number"
-              className="col-span-2 bg-gray-800 rounded px-2 py-1"
+              className="col-span-2 bg-white/10 border border-white/10 rounded px-2 py-1"
               placeholder="Bundle"
               value={bundle}
               onChange={(e) => setBundle(Number(e.target.value || 1))}
             />
             <button
-              className="col-span-2 px-2 py-1 rounded bg-blue-600"
+              className="col-span-2 btn btn-primary"
               onClick={() => {
                 if (!shopId || !name) return
                 upsert.mutate({
