@@ -104,10 +104,6 @@ export default function Player() {
                 <div className="text-gray-400">Thirst</div>
                 <div>{player.thirst}</div>
               </div>
-              <div className="bg-gray-800 rounded p-2">
-                <div className="text-gray-400">AP Reset</div>
-                <div className="text-gray-300">Auto resets to 2 each day</div>
-              </div>
             </div>
 
             <div className="mt-4">

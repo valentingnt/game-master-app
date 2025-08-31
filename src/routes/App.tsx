@@ -5,12 +5,12 @@ export default function App() {
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <header className="border-b border-gray-800">
         <div className="px-4 py-3 flex items-center justify-between">
-          <Link to="/shop1" className="font-semibold">
+          <Link to="/player/shop1" className="font-semibold">
             Game Master
           </Link>
           <nav className="flex gap-4">
             <NavLink
-              to="/shop1"
+              to="/player/shop1"
               className={({ isActive }) =>
                 `px-2 py-1 rounded ${
                   isActive
@@ -22,7 +22,7 @@ export default function App() {
               Shop 1
             </NavLink>
             <NavLink
-              to="/shop2"
+              to="/player/shop2"
               className={({ isActive }) =>
                 `px-2 py-1 rounded ${
                   isActive
