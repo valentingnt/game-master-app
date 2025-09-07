@@ -138,6 +138,27 @@ export default function Display() {
       offCtx.restore()
       const maskData = offCtx.getImageData(0, 0, dw, dh)
 
+      // Wall detection config
+      const WALL_LUMA_THRESHOLD = 16
+      const WALL_THICKNESS_PX = 1 // consider walls as at least N pixels thick
+      const isWallAt = (x: number, y: number): boolean => {
+        for (let ny = -WALL_THICKNESS_PX; ny <= WALL_THICKNESS_PX; ny++) {
+          const qy = y + ny
+          if (qy < 0 || qy >= dh) continue
+          for (let nx = -WALL_THICKNESS_PX; nx <= WALL_THICKNESS_PX; nx++) {
+            const qx = x + nx
+            if (qx < 0 || qx >= dw) continue
+            const idx = (qy * dw + qx) * 4
+            const rch = maskData.data[idx] ?? 0
+            const gch = maskData.data[idx + 1] ?? 0
+            const bch = maskData.data[idx + 2] ?? 0
+            const luma = 0.2126 * rch + 0.7152 * gch + 0.0722 * bch
+            if (luma < WALL_LUMA_THRESHOLD) return true
+          }
+        }
+        return false
+      }
+
       // Draw red stroke around the image bounds (always visible)
       ctx.save()
       ctx.strokeStyle = "#ff3131"
@@ -182,15 +203,7 @@ export default function Display() {
           const px = Math.round(cx + dirx * r)
           const py = Math.round(cy + diry * r)
           if (px < 0 || py < 0 || px >= dw || py >= dh) break
-          const idx = (py * dw + px) * 4
-          // White if luma > 200
-          const rch = maskData.data[idx] ?? 0
-          const gch = maskData.data[idx + 1] ?? 0
-          const bch = maskData.data[idx + 2] ?? 0
-
-          const luma = 0.2126 * rch + 0.7152 * gch + 0.0722 * bch
-          const isWall = luma < 32
-          if (isWall) break
+          if (isWallAt(px, py)) break
           // Collect all pixels until a wall; ignore white/black classification for reveal color
           revealed.push({ x: px, y: py })
         }
