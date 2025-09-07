@@ -139,7 +139,7 @@ export default function Display() {
       const maskData = offCtx.getImageData(0, 0, dw, dh)
 
       // Wall detection config
-      const WALL_LUMA_THRESHOLD = 16
+      const WALL_LUMA_THRESHOLD = 32
       const WALL_THICKNESS_PX = 1 // consider walls as at least N pixels thick
       const isWallAt = (x: number, y: number): boolean => {
         for (let ny = -WALL_THICKNESS_PX; ny <= WALL_THICKNESS_PX; ny++) {
