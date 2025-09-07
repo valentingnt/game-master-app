@@ -7,6 +7,8 @@ import type {
   Shop,
   ShopItem,
   Message,
+  MaskImage,
+  MaskPointer,
 } from "./types"
 import { enqueue, registerHandler } from "./offlineQueue"
 
@@ -1025,5 +1027,213 @@ export function usePurchaseItem() {
       qc.invalidateQueries({ queryKey: ["app_state"] })
       qc.invalidateQueries({ queryKey: ["inventory"] })
     },
+  })
+}
+
+// Mask images
+export function useMaskImages() {
+  return useQuery({
+    queryKey: ["mask_images"],
+    queryFn: async (): Promise<MaskImage[]> => {
+      const { data, error } = await supabase
+        .from("mask_images")
+        .select("*")
+        .order("created_at", { ascending: false })
+      if (error) throw error
+      return (data ?? []) as MaskImage[]
+    },
+    staleTime: 5_000,
+  })
+}
+
+export function useUploadMaskImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ file, name }: { file: File; name: string }) => {
+      // Derive dimensions
+      const dims = await new Promise<{ width: number; height: number }>(
+        (res, rej) => {
+          const img = new Image()
+          img.onload = () =>
+            res({ width: img.naturalWidth, height: img.naturalHeight })
+          img.onerror = rej
+          img.src = URL.createObjectURL(file)
+        }
+      )
+      const ext = (file.name.split(".").pop() || "png").toLowerCase()
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: uploadErr } = await supabase.storage
+        .from("masks")
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type || "image/png",
+        })
+      if (uploadErr) throw uploadErr
+      const { data: pub } = await supabase.storage
+        .from("masks")
+        .getPublicUrl(path)
+      const url = (pub as any)?.publicUrl as string
+      const { error: insErr } = await supabase.from("mask_images").insert({
+        name,
+        url,
+        width: dims.width,
+        height: dims.height,
+      } as any)
+      if (insErr) throw insErr
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mask_images"] })
+    },
+  })
+}
+
+export function useDeleteMaskImage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, url }: { id: string; url: string }) => {
+      try {
+        const src = (url ?? "").trim()
+        let path = ""
+        if (src.includes("/storage/v1/object/public/masks/")) {
+          path = src.split("/storage/v1/object/public/masks/")[1] || ""
+        } else if (src.includes("/storage/v1/object/masks/")) {
+          path = src.split("/storage/v1/object/masks/")[1] || ""
+        } else if (src.startsWith("masks/")) {
+          path = src.replace(/^masks\//, "")
+        }
+        if (path) {
+          await supabase.storage.from("masks").remove([path])
+        }
+      } catch {}
+      const { error } = await supabase.from("mask_images").delete().eq("id", id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mask_images"] })
+      qc.invalidateQueries({ queryKey: ["app_state"] })
+    },
+  })
+}
+
+export function useActivateMask() {
+  const mutate = useUpdateAppStateField("active_mask_id")
+  return {
+    activate: (id: string) => mutate.mutate(id as any),
+    deactivate: () => mutate.mutate(null as any),
+    mutation: mutate,
+  }
+}
+
+export function useActiveMaskImage() {
+  return useQuery({
+    queryKey: ["active_mask_image"],
+    queryFn: async (): Promise<MaskImage | null> => {
+      const { data: asData, error: asErr } = await supabase
+        .from("app_state")
+        .select("active_mask_id")
+        .limit(1)
+        .single()
+      if (asErr) throw asErr
+      const activeId = (asData as any)?.active_mask_id as string | null
+      if (!activeId) return null
+      const { data, error } = await supabase
+        .from("mask_images")
+        .select("*")
+        .eq("id", activeId)
+        .maybeSingle()
+      if (error) throw error
+      return (data as any) ?? null
+    },
+    staleTime: 2_000,
+  })
+}
+
+// Mask pointer
+export function useMaskPointer() {
+  return useQuery({
+    queryKey: ["mask_pointer"],
+    queryFn: async (): Promise<MaskPointer | null> => {
+      const { data, error } = await supabase
+        .from("mask_pointer")
+        .select("*")
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return (data as any) ?? null
+    },
+    staleTime: 500,
+  })
+}
+
+export function useUpdateMaskPointer() {
+  const qc = useQueryClient()
+  registerHandler("updateMaskPointer", async (varsAny: unknown) => {
+    const v = varsAny as { x: number; y: number }
+    const { data, error } = await supabase
+      .from("mask_pointer")
+      .select("id")
+      .limit(1)
+      .single()
+    if (error) throw error
+    const id = (data as any).id as string
+    const { error: updErr } = await supabase
+      .from("mask_pointer")
+      .update({ x: v.x, y: v.y, updated_at: new Date().toISOString() })
+      .eq("id", id)
+    if (updErr) throw updErr
+  })
+  return useMutation({
+    mutationFn: async ({ x, y }: { x: number; y: number }) => {
+      const { data, error } = await supabase
+        .from("mask_pointer")
+        .select("id")
+        .limit(1)
+        .single()
+      if (error) throw error
+      const id = (data as any).id as string
+      const { error: updErr } = await supabase
+        .from("mask_pointer")
+        .update({ x, y, updated_at: new Date().toISOString() })
+        .eq("id", id)
+      if (updErr) throw updErr
+    },
+    onMutate: async ({ x, y }) => {
+      await qc.cancelQueries({ queryKey: ["mask_pointer"] })
+      const prev = qc.getQueryData<MaskPointer | null>(["mask_pointer"]) || null
+      const next: MaskPointer = {
+        id: prev?.id ?? "optimistic",
+        x,
+        y,
+        updated_at: new Date().toISOString(),
+      }
+      qc.setQueryData(["mask_pointer"], next)
+      return { prev }
+    },
+    onError: async (_e, vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["mask_pointer"], ctx.prev)
+      await enqueue({
+        key: "updateMaskPointer",
+        payload: { x: vars.x, y: vars.y },
+        run: async () => {
+          const { data, error } = await supabase
+            .from("mask_pointer")
+            .select("id")
+            .limit(1)
+            .single()
+          if (error) throw error
+          const id = (data as any).id as string
+          const { error: updErr } = await supabase
+            .from("mask_pointer")
+            .update({
+              x: vars.x,
+              y: vars.y,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", id)
+          if (updErr) throw updErr
+        },
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mask_pointer"] }),
   })
 }
