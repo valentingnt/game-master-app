@@ -7,7 +7,9 @@ import { useState } from "react"
 import Modal from "./Modal"
 import { useToast } from "./Toast"
 
-export default function InventoryList() {
+export default function InventoryList({
+  showTitle = true,
+}: { showTitle?: boolean } = {}) {
   const { data: items } = useInventory()
   const upsert = useUpsertInventoryItem()
   const del = useDeleteInventoryItem()
@@ -31,7 +33,8 @@ export default function InventoryList() {
   return (
     <div className="card-surface p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="display-title text-base">Inventaire</div>
+        {showTitle && <div className="display-title text-base">Inventaire</div>}
+        {!showTitle && <div />}
         <button className="btn" onClick={addItem}>
           Ajouter
         </button>

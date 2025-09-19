@@ -150,7 +150,7 @@ export default function PlayerCard({ player: p }: Props) {
       </div>
 
       <div className="mt-3">
-        <label className="text-xs text-gray-400">URL de l'avatar</label>
+        <label className="text-xs text-white">URL de l'avatar</label>
         <div className="mt-1 flex items-center gap-2">
           <input
             className="flex-1 bg-white/10 border border-white/10 rounded px-2 py-1"
@@ -225,7 +225,7 @@ export default function PlayerCard({ player: p }: Props) {
 
       <div className="mt-4 flex flex-wrap gap-3 text-sm">
         <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
-          <div className="text-gray-400">Santé</div>
+          <div className="text-white">Santé</div>
           <div className="flex flex-wrap items-center gap-2">
             <input
               type="number"
@@ -344,7 +344,7 @@ export default function PlayerCard({ player: p }: Props) {
           </div>
         </div>
         <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
-          <div className="text-gray-400">Points d'action</div>
+          <div className="text-white">Points d'action</div>
           <div className="flex flex-wrap items-center gap-2">
             <input
               type="number"
@@ -358,7 +358,7 @@ export default function PlayerCard({ player: p }: Props) {
                 })
               }
             />
-            <span className="text-xs text-gray-400">/ 2</span>
+            <span className="text-xs text-white">/ 2</span>
           </div>
           <div className="mt-2 flex items-center gap-2">
             <button
@@ -388,7 +388,7 @@ export default function PlayerCard({ player: p }: Props) {
           </div>
         </div>
         <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
-          <div className="text-gray-400">Fatigue</div>
+          <div className="text-white">Fatigue</div>
           <input
             type="number"
             className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"
@@ -432,7 +432,7 @@ export default function PlayerCard({ player: p }: Props) {
 
       <div className="mt-3 flex flex-wrap gap-3 text-sm">
         <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
-          <div className="text-gray-400">Faim</div>
+          <div className="text-white">Faim</div>
           <div className="flex flex-wrap items-center gap-2">
             <input
               type="number"
@@ -471,7 +471,7 @@ export default function PlayerCard({ player: p }: Props) {
           </div>
         </div>
         <div className="bg-white/10 border border-white/10 rounded p-2 min-w-[170px] flex-1">
-          <div className="text-gray-400">Soif</div>
+          <div className="text-white">Soif</div>
           <div className="flex flex-wrap items-center gap-2">
             <input
               type="number"
@@ -512,7 +512,7 @@ export default function PlayerCard({ player: p }: Props) {
       </div>
 
       <div className="mt-4">
-        <div className="text-gray-400 text-sm mb-2">Statistiques</div>
+        <div className="text-white text-sm mb-2">Statistiques</div>
         <div className="flex flex-wrap gap-3 text-sm">
           {[
             { key: "orientation", label: "Orientation" },
@@ -527,7 +527,7 @@ export default function PlayerCard({ player: p }: Props) {
               key={s.key}
               className="bg-white/10 border border-white/10 rounded p-2 min-w-[200px] flex-1"
             >
-              <div className="text-gray-400">{s.label}</div>
+              <div className="text-white">{s.label}</div>
               <input
                 type="number"
                 className="w-16 bg-ink-900 rounded px-1 text-xs sm:text-sm"

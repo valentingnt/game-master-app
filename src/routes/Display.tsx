@@ -282,7 +282,7 @@ export default function Display() {
   ])
 
   return (
-    <div className="min-h-screen app-surface">
+    <div className="min-h-screen app-surface bg-grid">
       <main className="px-4 py-6 space-y-6">
         <section>
           <LEDDisplay

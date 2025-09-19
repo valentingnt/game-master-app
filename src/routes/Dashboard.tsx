@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [openModal, setOpenModal] = useState<null | "shop1" | "shop2">(null)
   const [openMasks, setOpenMasks] = useState(false)
   const [maskQuery, setMaskQuery] = useState("")
+  const [tab, setTab] = useState<"general" | "characters">("general")
   const app = useAppState().data
   const updateMain = useUpdateAppStateField("led_main_text")
   const updateTop = useUpdateAppStateField("led_small_top")
@@ -52,6 +53,10 @@ export default function Dashboard() {
   const serverPointer = useMaskPointer().data
   const toggleRotation = useToggleMaskRotation()
   const setRotationQuarters = useSetMaskRotationQuarters()
+  const playerRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const setPlayerRef = (id: string) => (el: HTMLDivElement | null) => {
+    playerRefs.current[id] = el
+  }
   type MaskNode =
     | { _type: "dir"; children: Record<string, MaskNode> }
     | { _type: "file"; item: any }
@@ -64,172 +69,268 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="space-y-6 lg:col-span-1 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto lg:min-h-0 pr-1">
-          <section>
-            <div className="card-surface p-4">
-              <div className="muted text-sm mb-1">Panneau principal</div>
-              <textarea
-                className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
-                rows={3}
-                value={app?.led_main_text ?? ""}
-                onChange={(e) => updateMain.mutate(e.target.value)}
-                placeholder="Panneau principal"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4 mt-3">
-              <div className="card-surface p-4">
-                <div className="muted text-sm mb-1">
-                  Panneau secondaire de gauche
-                </div>
-                <input
-                  className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
-                  value={app?.led_small_top ?? ""}
-                  onChange={(e) => updateTop.mutate(e.target.value)}
-                  placeholder="Écrire..."
-                />
-              </div>
-              <div className="card-surface p-4">
-                <div className="muted text-sm mb-1">
-                  Panneau secondaire de droite
-                </div>
-                <input
-                  className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
-                  value={app?.led_small_bottom ?? ""}
-                  onChange={(e) => updateBottom.mutate(e.target.value)}
-                  placeholder="Écrire..."
-                />
-              </div>
-            </div>
-          </section>
-          <section className="card-surface p-4 space-y-3">
-            <div className="display-title text-base">Images / Spotlight</div>
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={!!app?.mask_spotlight_enabled}
-                  onChange={(e) =>
-                    toggleSpotlight.mutate(e.target.checked as any)
-                  }
-                />
-                Activer mode spotlight
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={!!app?.mask_show_on_display}
-                  onChange={(e) =>
-                    toggleSpotlightOnDisplay.mutate(e.target.checked as any)
-                  }
-                />
-                Afficher sur écran Display
-              </label>
-            </div>
+      {/* Tabs header */}
+      <div className="mb-4">
+        <div className="inline-flex rounded overflow-hidden border border-white/10">
+          <button
+            className={`px-4 py-2 text-sm ${
+              tab === "general"
+                ? "bg-white/10"
+                : "bg-transparent hover:bg-white/5"
+            }`}
+            onClick={() => setTab("general")}
+          >
+            Général
+          </button>
+          <button
+            className={`px-4 py-2 text-sm ${
+              tab === "characters"
+                ? "bg-white/10"
+                : "bg-transparent hover:bg-white/5"
+            }`}
+            onClick={() => setTab("characters")}
+          >
+            Personnages
+          </button>
+        </div>
+      </div>
 
-            <div className="flex items-center gap-2">
-              <button className="btn" onClick={() => setOpenMasks(true)}>
-                Gérer les images
-              </button>
+      {tab === "general" && (
+        <>
+          {/* Top bento grid: non-growing sections */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Tokens */}
+            <div>
+              <div className="display-title text-base mb-2">Tokens</div>
+              <TokenCounter showTitle={false} />
             </div>
-
-            <div className="border-t border-white/10 pt-3 space-y-2">
-              <div className="display-title text-base">Cibles (joueurs)</div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                {(players ?? []).map((p) => {
-                  const selected = (app?.mask_target_player_ids ?? []).includes(
-                    p.id
-                  )
-                  return (
-                    <label key={p.id} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={(e) => {
-                          const prev = (app?.mask_target_player_ids ??
-                            []) as string[]
-                          const next = e.target.checked
-                            ? Array.from(new Set([...prev, p.id]))
-                            : prev.filter((id) => id !== p.id)
-                          updateTargets.mutate(next as any)
-                        }}
-                      />
-                      {p.first_name} {p.last_name}
-                    </label>
-                  )
-                })}
-              </div>
+            {/* Day */}
+            <div>
+              <div className="display-title text-base mb-2">Jour</div>
+              <DayController showTitle={false} />
             </div>
-          </section>
-          <section className="space-y-6">
-            <TokenCounter />
-            <DayController />
-            <div className="card-surface p-4">
+            {/* Shop controls */}
+            <div>
               <div className="display-title text-base mb-2">
                 Contrôles des boutiques
               </div>
-              <div className="space-y-3 text-sm">
-                {[
-                  { label: "Boutique 1", data: shop1 },
-                  { label: "Boutique 2", data: shop2 },
-                ].map((s) => (
-                  <div key={s.label} className="flex items-center gap-2">
-                    <div className="w-20 muted">{s.label}</div>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={!!s.data?.shop?.unlocked}
-                        onChange={(e) =>
-                          s.data?.shop?.id &&
-                          toggleUnlock.mutate({
-                            id: s.data.shop.id,
-                            unlocked: e.target.checked,
-                          })
-                        }
-                      />
-                      Déverrouillé
-                    </label>
+              <div className="card-surface p-4">
+                <div className="space-y-3 text-sm">
+                  {[
+                    { label: "Boutique 1", data: shop1 },
+                    { label: "Boutique 2", data: shop2 },
+                  ].map((s) => (
+                    <div key={s.label} className="flex items-center gap-2">
+                      <div className="w-20 muted">{s.label}</div>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={!!s.data?.shop?.unlocked}
+                          onChange={(e) =>
+                            s.data?.shop?.id &&
+                            toggleUnlock.mutate({
+                              id: s.data.shop.id,
+                              unlocked: e.target.checked,
+                            })
+                          }
+                        />
+                        Déverrouillé
+                      </label>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      className="btn"
+                      onClick={() => setOpenModal("shop1")}
+                    >
+                      Gérer les items de la boutique 1
+                    </button>
+                    <button
+                      className="btn"
+                      onClick={() => setOpenModal("shop2")}
+                    >
+                      Gérer les items de la boutique 2
+                    </button>
                   </div>
-                ))}
-                <div className="flex items-center gap-2 pt-2">
-                  <button className="btn" onClick={() => setOpenModal("shop1")}>
-                    Gérer les items de la boutique 1
-                  </button>
-                  <button className="btn" onClick={() => setOpenModal("shop2")}>
-                    Gérer les items de la boutique 2
-                  </button>
                 </div>
               </div>
             </div>
-            <InventoryList />
-          </section>
-        </div>
 
-        <div className="lg:col-span-2 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto lg:min-h-0 pr-1">
-          <h2 className="display-title text-lg mb-3">Joueurs</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {(players ?? []).map((p) => (
-              <PlayerCard key={p.id} player={p} />
-            ))}
+            {/* LED panels */}
+            <div className="lg:col-span-2">
+              <div className="display-title text-base mb-2">Panneaux LED</div>
+              <div className="card-surface p-4">
+                <textarea
+                  className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
+                  rows={3}
+                  value={app?.led_main_text ?? ""}
+                  onChange={(e) => updateMain.mutate(e.target.value)}
+                  placeholder="Panneau principal"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                  <div className="card-surface p-4">
+                    <div className="muted text-sm mb-1">
+                      Panneau secondaire de gauche
+                    </div>
+                    <input
+                      className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
+                      value={app?.led_small_top ?? ""}
+                      onChange={(e) => updateTop.mutate(e.target.value)}
+                      placeholder="Écrire..."
+                    />
+                  </div>
+                  <div className="card-surface p-4">
+                    <div className="muted text-sm mb-1">
+                      Panneau secondaire de droite
+                    </div>
+                    <input
+                      className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
+                      value={app?.led_small_bottom ?? ""}
+                      onChange={(e) => updateBottom.mutate(e.target.value)}
+                      placeholder="Écrire..."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Images / Spotlight */}
+            <div className="lg:col-span-1">
+              <div className="display-title text-base mb-2">
+                Images / Spotlight
+              </div>
+              <div className="card-surface p-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!app?.mask_spotlight_enabled}
+                      onChange={(e) =>
+                        toggleSpotlight.mutate(e.target.checked as any)
+                      }
+                    />
+                    Activer mode spotlight
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!app?.mask_show_on_display}
+                      onChange={(e) =>
+                        toggleSpotlightOnDisplay.mutate(e.target.checked as any)
+                      }
+                    />
+                    Afficher sur écran Display
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button className="btn" onClick={() => setOpenMasks(true)}>
+                    Gérer les images
+                  </button>
+                </div>
+
+                <div className="border-t border-white/10 pt-3 space-y-2">
+                  <div className="display-title text-base">
+                    Cibles (joueurs)
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {(players ?? []).map((p) => {
+                      const selected = (
+                        app?.mask_target_player_ids ?? []
+                      ).includes(p.id)
+                      return (
+                        <label key={p.id} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={(e) => {
+                              const prev = (app?.mask_target_player_ids ??
+                                []) as string[]
+                              const next = e.target.checked
+                                ? Array.from(new Set([...prev, p.id]))
+                                : prev.filter((id) => id !== p.id)
+                              updateTargets.mutate(next as any)
+                            }}
+                          />
+                          {p.first_name} {p.last_name}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mt-6">
-            <MessageHistory />
+
+          {/* Bottom bento grid: growing sections */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            <div>
+              <div className="display-title text-base mb-2">Messages</div>
+              <MessageHistory showTitle={false} />
+            </div>
+            <div>
+              <div className="display-title text-base mb-2">Inventaire</div>
+              <InventoryList showTitle={false} />
+            </div>
+            <div>
+              <div className="display-title text-base mb-2">
+                Aperçu masque (sans effet)
+              </div>
+              <div className="card-surface p-4">
+                <PointerPreview
+                  imageUrl={activeMask?.url || ""}
+                  pointer={
+                    serverPointer
+                      ? { x: serverPointer.x, y: serverPointer.y }
+                      : null
+                  }
+                  onCommit={(x, y) => updatePointer({ x, y })}
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === "characters" && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Left nav */}
+          <div className="lg:col-span-1 pr-1">
+            <div className="card-surface p-4 lg:sticky lg:top-2">
+              <div className="display-title text-base mb-3">Personnages</div>
+              <div className="space-y-2 text-sm">
+                {(players ?? []).map((p) => (
+                  <button
+                    key={p.id}
+                    className="w-full text-left btn btn-ghost"
+                    onClick={() =>
+                      playerRefs.current[p.id]?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      })
+                    }
+                  >
+                    {p.first_name} {p.last_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right content: players */}
+          <div className="lg:col-span-3 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto lg:min-h-0 pr-1">
+            <h2 className="display-title text-lg mb-3">Joueurs</h2>
+            <div className="space-y-16">
+              {(players ?? []).map((p) => (
+                <div key={p.id} ref={setPlayerRef(p.id)}>
+                  <PlayerCard player={p} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-      {/* GM preview canvas (no mask) */}
-      <div className="card-surface p-4 mt-6">
-        <div className="display-title text-base mb-2">
-          Aperçu masque (sans effet)
-        </div>
-        <PointerPreview
-          imageUrl={activeMask?.url || ""}
-          pointer={
-            serverPointer ? { x: serverPointer.x, y: serverPointer.y } : null
-          }
-          onCommit={(x, y) => updatePointer({ x, y })}
-        />
-      </div>
+      )}
+
       {openModal && (
         <ShopItemsModal
           shopSlug={openModal}

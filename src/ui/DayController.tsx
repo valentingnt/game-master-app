@@ -3,7 +3,9 @@ import { useAppState, useAdvanceDay, useUpdateDay } from "../lib/hooks"
 import Modal from "./Modal"
 import { useToast } from "./Toast"
 
-export default function DayController() {
+export default function DayController({
+  showTitle = true,
+}: { showTitle?: boolean } = {}) {
   const { data } = useAppState()
   const [day, setDay] = useState<number>(data?.day ?? 1)
   const advance = useAdvanceDay()
@@ -20,7 +22,8 @@ export default function DayController() {
   return (
     <div className="card-surface p-4">
       <div className="flex items-center justify-between">
-        <div className="display-title text-base">Jour</div>
+        {showTitle && <div className="display-title text-base">Jour</div>}
+        {!showTitle && <div className="muted text-sm">Jour</div>}
         <div className="text-2xl">Jour {day}</div>
       </div>
       <div className="mt-3 flex gap-2">

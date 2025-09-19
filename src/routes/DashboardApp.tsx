@@ -66,7 +66,7 @@ export default function DashboardApp() {
   }
 
   return (
-    <div className="min-h-screen app-surface">
+    <div className="min-h-screen bg-zinc-700 text-white">
       <main className="px-4 py-6">
         {!authed ? (
           <div className="min-h-[60vh] flex items-center justify-center">

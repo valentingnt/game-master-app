@@ -3,7 +3,9 @@ import { useAppState, useUpdateTokens } from "../lib/hooks"
 import Modal from "./Modal"
 import { useToast } from "./Toast"
 
-export default function TokenCounter() {
+export default function TokenCounter({
+  showTitle = true,
+}: { showTitle?: boolean } = {}) {
   const { data } = useAppState()
   const [tokens, setTokens] = useState<number>(data?.tokens ?? 0)
   const updateTokens = useUpdateTokens()
@@ -18,7 +20,8 @@ export default function TokenCounter() {
   return (
     <div className="card-surface p-4">
       <div className="flex items-center justify-between">
-        <div className="display-title text-base">Tokens</div>
+        {showTitle && <div className="display-title text-base">Tokens</div>}
+        {!showTitle && <div className="muted text-sm">Total</div>}
         <div className="text-2xl">{tokens}</div>
       </div>
       <div className="mt-3 flex gap-2">

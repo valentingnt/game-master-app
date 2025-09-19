@@ -6,7 +6,9 @@ import {
 } from "../lib/hooks"
 import SendMessageModal from "./SendMessageModal"
 
-export default function MessageHistory() {
+export default function MessageHistory({
+  showTitle = true,
+}: { showTitle?: boolean } = {}) {
   const { data: messages } = useMessages()
   const { data: players } = usePlayers()
   const toggle = useToggleMessageVisibility()
@@ -21,7 +23,8 @@ export default function MessageHistory() {
   return (
     <div className="card-surface p-4">
       <div className="flex items-center justify-between mb-3">
-        <div className="display-title text-base">Messages</div>
+        {showTitle && <div className="display-title text-base">Messages</div>}
+        {!showTitle && <div />}
         <button className="btn" onClick={() => setOpen(true)}>
           Nouveau
         </button>

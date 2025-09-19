@@ -18,7 +18,7 @@ body,
 }
 
 .led-text {
-  @apply font-mono tracking-widest drop-shadow;
+  @apply font-mono drop-shadow;
   font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
   text-shadow: 0 0 6px rgba(255, 255, 255, 0.6),
@@ -29,6 +29,7 @@ body,
 .led-panel {
   @apply rounded border w-full;
   border-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(0, 0, 0, 0.3);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14),
     inset 0 1px 30px rgba(255, 255, 255, 0.12);
 }
