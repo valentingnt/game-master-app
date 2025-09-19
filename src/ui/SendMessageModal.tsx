@@ -39,7 +39,7 @@ export default function SendMessageModal({ open, onClose }: Props) {
 
   return (
     <Modal open={open} onClose={onClose} title="Envoyer un message">
-      <div className="space-y-4">
+      <div className="space-y-4 text-white">
         <div className="text-xs uppercase tracking-wider muted">Contenu</div>
         <textarea
           className="w-full min-h-[120px] bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
