@@ -9,6 +9,7 @@ import type {
   Message,
   MaskImage,
   MaskPointer,
+  PlayerInventoryItem,
 } from "./types"
 import { enqueue, registerHandler } from "./offlineQueue"
 
@@ -429,6 +430,225 @@ export function useDeleteInventoryItem() {
       })
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["inventory"] }),
+  })
+}
+
+// Personal inventory per player
+export function usePlayerInventory(playerId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["player_inventory", playerId ?? "none"],
+    enabled: !!playerId,
+    queryFn: async (): Promise<PlayerInventoryItem[]> => {
+      if (!playerId) return []
+      const { data, error } = await supabase
+        .from("player_inventory")
+        .select("*")
+        .eq("player_id", playerId)
+        .order("item_name")
+      if (error) throw error
+      return (data ?? []) as PlayerInventoryItem[]
+    },
+    staleTime: 5_000,
+  })
+}
+
+// Transfer common -> player
+export function useTransferCommonToPlayer() {
+  const qc = useQueryClient()
+  registerHandler("transferCommonToPlayer", async (varsAny: unknown) => {
+    const v = varsAny as {
+      player_id: string
+      item_name: string
+      quantity: number
+    }
+    const { error } = await supabase.rpc("transfer_common_to_player", {
+      p_player_id: v.player_id,
+      p_item_name: v.item_name,
+      p_quantity: v.quantity,
+    } as any)
+    if (error) throw error
+  })
+  return useMutation({
+    mutationFn: async ({
+      player_id,
+      item_name,
+      quantity,
+    }: {
+      player_id: string
+      item_name: string
+      quantity: number
+    }) => {
+      const { error } = await supabase.rpc("transfer_common_to_player", {
+        p_player_id: player_id,
+        p_item_name: item_name,
+        p_quantity: quantity,
+      } as any)
+      if (error) throw error
+    },
+    onMutate: async ({ player_id, item_name, quantity }) => {
+      // Optimistically decrement common inventory
+      await qc.cancelQueries({ queryKey: ["inventory"] })
+      const prevInv = qc.getQueryData<InventoryItem[]>(["inventory"]) ?? []
+      const src = prevInv.find((i) => i.item_name === item_name)
+      const nextInv = src
+        ? prevInv.map((i) =>
+            i.id === src.id
+              ? { ...i, quantity: Math.max(0, (i.quantity ?? 0) - quantity) }
+              : i
+          )
+        : prevInv
+      qc.setQueryData(["inventory"], nextInv)
+
+      // Optimistically increment player's inventory
+      const key: [string, string] = ["player_inventory", player_id]
+      await qc.cancelQueries({ queryKey: key })
+      const prevPI = qc.getQueryData<PlayerInventoryItem[]>(key) ?? []
+      const existing = prevPI.find((i) => i.item_name === item_name)
+      let nextPI: PlayerInventoryItem[]
+      if (existing) {
+        nextPI = prevPI.map((i) =>
+          i.id === existing.id
+            ? { ...i, quantity: (i.quantity ?? 0) + quantity }
+            : i
+        )
+      } else {
+        nextPI = [
+          ...prevPI,
+          {
+            id: `optimistic-${Date.now()}`,
+            player_id,
+            item_name,
+            quantity,
+          },
+        ]
+      }
+      qc.setQueryData(key, nextPI)
+
+      return { prevInv, key, prevPI }
+    },
+    onError: async (_e, vars, ctx) => {
+      // Revert
+      if (ctx?.prevInv) qc.setQueryData(["inventory"], ctx.prevInv)
+      if (ctx?.key && ctx?.prevPI) qc.setQueryData(ctx.key, ctx.prevPI)
+      await enqueue({
+        key: "transferCommonToPlayer",
+        payload: vars,
+        run: async () => {
+          const { error } = await supabase.rpc("transfer_common_to_player", {
+            p_player_id: vars.player_id,
+            p_item_name: vars.item_name,
+            p_quantity: vars.quantity,
+          } as any)
+          if (error) throw error
+        },
+      })
+    },
+    onSuccess: (_v, vars) => {
+      qc.invalidateQueries({ queryKey: ["inventory"] })
+      qc.invalidateQueries({ queryKey: ["player_inventory", vars.player_id] })
+    },
+  })
+}
+
+// Transfer player -> common
+export function useTransferPlayerToCommon() {
+  const qc = useQueryClient()
+  registerHandler("transferPlayerToCommon", async (varsAny: unknown) => {
+    const v = varsAny as {
+      player_id: string
+      item_name: string
+      quantity: number
+    }
+    const { error } = await supabase.rpc("transfer_player_to_common", {
+      p_player_id: v.player_id,
+      p_item_name: v.item_name,
+      p_quantity: v.quantity,
+    } as any)
+    if (error) throw error
+  })
+  return useMutation({
+    mutationFn: async ({
+      player_id,
+      item_name,
+      quantity,
+    }: {
+      player_id: string
+      item_name: string
+      quantity: number
+    }) => {
+      const { error } = await supabase.rpc("transfer_player_to_common", {
+        p_player_id: player_id,
+        p_item_name: item_name,
+        p_quantity: quantity,
+      } as any)
+      if (error) throw error
+    },
+    onMutate: async ({ player_id, item_name, quantity }) => {
+      // Optimistically decrement player's inventory
+      const key: [string, string] = ["player_inventory", player_id]
+      await qc.cancelQueries({ queryKey: key })
+      const prevPI = qc.getQueryData<PlayerInventoryItem[]>(key) ?? []
+      const src = prevPI.find((i) => i.item_name === item_name)
+      let nextPI: PlayerInventoryItem[]
+      if (src) {
+        const newQty = Math.max(0, (src.quantity ?? 0) - quantity)
+        if (newQty <= 0) {
+          nextPI = prevPI.filter((i) => i.id !== src.id)
+        } else {
+          nextPI = prevPI.map((i) =>
+            i.id === src.id ? { ...i, quantity: newQty } : i
+          )
+        }
+      } else {
+        nextPI = prevPI
+      }
+      qc.setQueryData(key, nextPI)
+
+      // Optimistically increment common inventory
+      await qc.cancelQueries({ queryKey: ["inventory"] })
+      const prevInv = qc.getQueryData<InventoryItem[]>(["inventory"]) ?? []
+      const existing = prevInv.find((i) => i.item_name === item_name)
+      let nextInv: InventoryItem[]
+      if (existing) {
+        nextInv = prevInv.map((i) =>
+          i.id === existing.id
+            ? { ...i, quantity: (i.quantity ?? 0) + quantity }
+            : i
+        )
+      } else {
+        nextInv = [
+          ...prevInv,
+          {
+            id: `optimistic-${Date.now()}`,
+            item_name,
+            quantity,
+          } as InventoryItem,
+        ]
+      }
+      qc.setQueryData(["inventory"], nextInv)
+
+      return { key, prevPI, prevInv }
+    },
+    onError: async (_e, vars, ctx) => {
+      if (ctx?.key && ctx?.prevPI) qc.setQueryData(ctx.key, ctx.prevPI)
+      if (ctx?.prevInv) qc.setQueryData(["inventory"], ctx.prevInv)
+      await enqueue({
+        key: "transferPlayerToCommon",
+        payload: vars,
+        run: async () => {
+          const { error } = await supabase.rpc("transfer_player_to_common", {
+            p_player_id: vars.player_id,
+            p_item_name: vars.item_name,
+            p_quantity: vars.quantity,
+          } as any)
+          if (error) throw error
+        },
+      })
+    },
+    onSuccess: (_v, vars) => {
+      qc.invalidateQueries({ queryKey: ["inventory"] })
+      qc.invalidateQueries({ queryKey: ["player_inventory", vars.player_id] })
+    },
   })
 }
 

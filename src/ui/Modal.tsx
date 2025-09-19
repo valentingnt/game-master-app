@@ -61,7 +61,7 @@ export default function Modal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -73,10 +73,12 @@ export default function Modal({
         aria-label={title}
         className={`w-full ${
           maxWClass ?? "max-w-xl"
-        } card-surface p-4 shadow-xl`}
+        } card-surface p-5 shadow-xl`}
       >
         <div className="mb-3 flex items-center justify-between">
-          <div className="display-title text-base text-gray-100">{title}</div>
+          <div className="display-title text-xl md:text-2xl text-gray-100">
+            {title}
+          </div>
           <button
             ref={firstFocusable}
             className="btn btn-ghost"

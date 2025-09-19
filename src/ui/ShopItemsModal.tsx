@@ -62,7 +62,10 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
       onClose={onClose}
       title={`Gérer les items – ${shopSlug.toUpperCase()}`}
     >
-      <div className="space-y-2 max-h-[60vh] overflow-auto">
+      <div className="space-y-3 max-h-[60vh] overflow-auto">
+        <div className="text-xs uppercase tracking-wider muted">
+          Items existants
+        </div>
         {items.map((it) => (
           <div key={it.id} className="flex flex-wrap gap-2 items-center">
             <input
@@ -200,7 +203,9 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
       </div>
 
       <div className="mt-4 border-t border-white/10 pt-3">
-        <div className="text-sm muted mb-2">Ajouter un item</div>
+        <div className="text-xs uppercase tracking-wider muted mb-2">
+          Ajouter un item
+        </div>
         <div className="flex flex-wrap gap-2 items-center">
           <input
             className="bg-white/10 border border-white/10 rounded px-2 py-1 min-w-[180px] flex-1"

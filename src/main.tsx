@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import {
   subscribeAppState,
   subscribeInventory,
+  subscribePlayerInventory,
   subscribePlayers,
   subscribeShops,
   subscribeMessages,
@@ -27,6 +28,7 @@ const queryClient = new QueryClient()
 // Wire realtime on client start
 subscribeAppState(queryClient)
 subscribeInventory(queryClient)
+subscribePlayerInventory(queryClient)
 subscribePlayers(queryClient)
 subscribeShops(queryClient)
 subscribeMessages(queryClient)

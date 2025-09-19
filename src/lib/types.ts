@@ -17,6 +17,13 @@ export type InventoryItem = {
   quantity: number
 }
 
+export type PlayerInventoryItem = {
+  id: string
+  player_id: string
+  item_name: string
+  quantity: number
+}
+
 export type Player = {
   id: string
   first_name: string

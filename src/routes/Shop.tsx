@@ -53,10 +53,12 @@ export default function Shop({ shopId }: Props) {
   return (
     <div className="space-y-8">
       <div className="flex items-end justify-between">
-        <h1 className="display-title text-2xl uppercase tracking-widest">
+        <h1 className="display-title text-2xl md:text-3xl uppercase tracking-widest">
           {shopId === "shop1" ? "Boutique 1" : "Boutique 2"}
         </h1>
-        <div className="muted text-sm">Solde: {tokens} tokens</div>
+        <div className="text-xs uppercase tracking-wider muted">
+          Solde: {tokens} tokens
+        </div>
       </div>
       {!unlocked && (
         <p className="text-sm text-yellow-400">
@@ -76,7 +78,9 @@ export default function Shop({ shopId }: Props) {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="display-title text-lg">{it.name}</div>
-                  <div className="text-sm muted">{it.price} tokens</div>
+                  <div className="text-xs uppercase tracking-wider muted">
+                    {it.price} tokens
+                  </div>
                 </div>
                 {it.bundle_quantity > 1 && (
                   <div className="badge">x{it.bundle_quantity}</div>

@@ -26,6 +26,25 @@ export function subscribeInventory(qc: QueryClient) {
     .subscribe()
 }
 
+export function subscribePlayerInventory(qc: QueryClient) {
+  return supabase
+    .channel("player_inventory_changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "player_inventory" },
+      (payload) => {
+        const row: any = payload.new || payload.old
+        const playerId = row?.player_id
+        if (playerId) {
+          qc.invalidateQueries({ queryKey: ["player_inventory", playerId] })
+        } else {
+          qc.invalidateQueries({ queryKey: ["player_inventory"] })
+        }
+      }
+    )
+    .subscribe()
+}
+
 export function subscribePlayers(qc: QueryClient) {
   return supabase
     .channel("players_changes")

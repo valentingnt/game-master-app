@@ -57,7 +57,7 @@ h3,
   @apply bg-ink-950 text-gray-100;
 }
 .card-surface {
-  @apply bg-ink-900/80 border border-white/15 rounded shadow-sm;
+  @apply bg-ink-900/70 border border-white/10 rounded shadow-sm;
 }
 .muted {
   @apply text-gray-300;
@@ -87,7 +87,7 @@ h3,
 input,
 textarea,
 select {
-  @apply text-gray-100 placeholder-gray-400;
+  @apply text-gray-100 placeholder-gray-500;
 }
 
 /* Shop animations */
@@ -160,14 +160,14 @@ select {
   @apply w-full;
 }
 .progress-track {
-  @apply h-2 rounded bg-white/15 overflow-hidden;
+  @apply h-2 rounded bg-white/10 overflow-hidden;
 }
 .progress-fill {
   @apply h-full rounded bg-gray-100;
 }
 
 .badge {
-  @apply inline-flex items-center rounded px-2 py-0.5 text-[10px] uppercase tracking-wider bg-white/15 border border-white/15 text-gray-200;
+  @apply inline-flex items-center rounded px-2 py-0.5 text-[10px] uppercase tracking-wider bg-white/10 border border-white/10 text-gray-200;
 }
 
 .bg-radial {
@@ -193,7 +193,7 @@ select {
   position: absolute;
   inset: 0;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
 }
 .zero-fill {
   position: absolute;
@@ -227,5 +227,27 @@ select {
   left: 50%;
   width: 2px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Dashboard-specific tone adjustments for long viewing comfort */
+.dashboard-page {
+  @apply text-gray-200;
+}
+.dashboard-page .card-surface {
+  @apply bg-ink-800/80 border-white/10;
+}
+.dashboard-page .muted {
+  @apply text-gray-400;
+}
+.dashboard-page input,
+.dashboard-page textarea,
+.dashboard-page select {
+  @apply placeholder-gray-500;
+}
+.dashboard-page .btn {
+  @apply bg-white/15 hover:bg-white/20 border-white/10;
+}
+.dashboard-page .btn-primary {
+  @apply bg-gray-200 text-ink-900 hover:bg-white;
 }

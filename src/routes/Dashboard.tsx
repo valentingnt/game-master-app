@@ -3,7 +3,6 @@ import {
   useUpdateAppStateField,
   useMaskImages,
   useUploadMaskImage,
-  useDeleteMaskImage,
   useActivateMask,
   useToggleSpotlight,
   useToggleSpotlightOnDisplay,
@@ -13,7 +12,15 @@ import TokenCounter from "../ui/TokenCounter"
 import DayController from "../ui/DayController"
 import InventoryList from "../ui/InventoryList"
 import PlayerCard from "../ui/PlayerCard"
-import { usePlayers, useShop, useToggleShopUnlock } from "../lib/hooks"
+import {
+  usePlayers,
+  useShop,
+  useToggleShopUnlock,
+  useInventory,
+  usePlayerInventory,
+  useTransferCommonToPlayer,
+  useTransferPlayerToCommon,
+} from "../lib/hooks"
 import ShopItemsModal from "../ui/ShopItemsModal"
 import Modal from "../ui/Modal"
 import MessageHistory from "../ui/MessageHistory"
@@ -22,9 +29,9 @@ import {
   useActiveMaskImage,
   useUpdateMaskPointer,
   useMaskPointer,
-  useToggleMaskRotation,
   useSetMaskRotationQuarters,
 } from "../lib/hooks"
+import { useToast } from "../ui/Toast"
 
 export default function Dashboard() {
   const { data: players } = usePlayers()
@@ -41,7 +48,6 @@ export default function Dashboard() {
   const updateBottom = useUpdateAppStateField("led_small_bottom")
   const { data: masks } = useMaskImages()
   const uploadMask = useUploadMaskImage()
-  const deleteMask = useDeleteMaskImage()
   const { activate, deactivate } = useActivateMask()
   const activeMaskId = app?.active_mask_id ?? null
   const activeMask = useActiveMaskImage().data
@@ -51,7 +57,6 @@ export default function Dashboard() {
   // Pointer update
   const { mutate: updatePointer } = useUpdateMaskPointer()
   const serverPointer = useMaskPointer().data
-  const toggleRotation = useToggleMaskRotation()
   const setRotationQuarters = useSetMaskRotationQuarters()
   const playerRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const setPlayerRef = (id: string) => (el: HTMLDivElement | null) => {
@@ -66,12 +71,29 @@ export default function Dashboard() {
   const [customFolder, setCustomFolder] = useState<string>("")
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadName, setUploadName] = useState<string>("")
+  const [pickerId, setPickerId] = useState<string>("")
+
+  // Transfer inventories state
+  const { data: commonInv } = useInventory()
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("")
+  const { data: personalInv } = usePlayerInventory(selectedPlayerId || "")
+  const [commonItem, setCommonItem] = useState<string>("")
+  const [qtyToPlayer, setQtyToPlayer] = useState<number>(1)
+  const [personalItem, setPersonalItem] = useState<string>("")
+  const [qtyToCommon, setQtyToCommon] = useState<number>(1)
+  const transferC2P = useTransferCommonToPlayer()
+  const transferP2C = useTransferPlayerToCommon()
+  const { show } = useToast()
+
+  useEffect(() => {
+    setPickerId(activeMask?.id ?? "")
+  }, [activeMask?.id])
 
   return (
-    <>
+    <div className="dashboard-page">
       {/* Tabs header */}
       <div className="mb-4">
-        <div className="inline-flex rounded overflow-hidden border border-white/10">
+        <div className="inline-flex rounded border border-white/10">
           <button
             className={`px-4 py-2 text-sm ${
               tab === "general"
@@ -97,197 +119,537 @@ export default function Dashboard() {
 
       {tab === "general" && (
         <>
-          {/* Top bento grid: non-growing sections */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Tokens */}
-            <div>
-              <div className="display-title text-base mb-2">Tokens</div>
-              <TokenCounter showTitle={false} />
+          {/* Section 1: Tokens, Day, LED Panels */}
+          <div className="mb-6">
+            <div className="display-title text-xl md:text-2xl mb-4">
+              Ressources globales
             </div>
-            {/* Day */}
-            <div>
-              <div className="display-title text-base mb-2">Jour</div>
-              <DayController showTitle={false} />
-            </div>
-            {/* Shop controls */}
-            <div>
-              <div className="display-title text-base mb-2">
-                Contrôles des boutiques
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Tokens */}
+              <div>
+                <div className="text-xs uppercase tracking-wider muted mb-2">
+                  Tokens
+                </div>
+                <TokenCounter showTitle={false} />
               </div>
-              <div className="card-surface p-4">
-                <div className="space-y-3 text-sm">
-                  {[
-                    { label: "Boutique 1", data: shop1 },
-                    { label: "Boutique 2", data: shop2 },
-                  ].map((s) => (
-                    <div key={s.label} className="flex items-center gap-2">
-                      <div className="w-20 muted">{s.label}</div>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={!!s.data?.shop?.unlocked}
-                          onChange={(e) =>
-                            s.data?.shop?.id &&
-                            toggleUnlock.mutate({
-                              id: s.data.shop.id,
-                              unlocked: e.target.checked,
-                            })
-                          }
-                        />
-                        Déverrouillé
-                      </label>
+              {/* Day */}
+              <div>
+                <div className="text-xs uppercase tracking-wider muted mb-2">
+                  Jour
+                </div>
+                <DayController showTitle={false} />
+              </div>
+              {/* LED panels (full width on large) */}
+              <div className="lg:col-span-3">
+                <div className="text-xs uppercase tracking-wider muted mb-2">
+                  Panneaux LED
+                </div>
+                <div className="card-surface p-4">
+                  <textarea
+                    className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
+                    rows={3}
+                    value={app?.led_main_text ?? ""}
+                    onChange={(e) => updateMain.mutate(e.target.value)}
+                    placeholder="Texte du panneau principal…"
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                    <div className="card-surface p-4">
+                      <div className="text-xs uppercase tracking-wider muted mb-1">
+                        Panneau secondaire de gauche
+                      </div>
+                      <input
+                        className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
+                        value={app?.led_small_top ?? ""}
+                        onChange={(e) => updateTop.mutate(e.target.value)}
+                        placeholder="Texte…"
+                      />
                     </div>
-                  ))}
-                  <div className="flex items-center gap-2 pt-2">
-                    <button
-                      className="btn"
-                      onClick={() => setOpenModal("shop1")}
-                    >
-                      Gérer les items de la boutique 1
-                    </button>
-                    <button
-                      className="btn"
-                      onClick={() => setOpenModal("shop2")}
-                    >
-                      Gérer les items de la boutique 2
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* LED panels */}
-            <div className="lg:col-span-2">
-              <div className="display-title text-base mb-2">Panneaux LED</div>
-              <div className="card-surface p-4">
-                <textarea
-                  className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
-                  rows={3}
-                  value={app?.led_main_text ?? ""}
-                  onChange={(e) => updateMain.mutate(e.target.value)}
-                  placeholder="Panneau principal"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-                  <div className="card-surface p-4">
-                    <div className="muted text-sm mb-1">
-                      Panneau secondaire de gauche
+                    <div className="card-surface p-4">
+                      <div className="text-xs uppercase tracking-wider muted mb-1">
+                        Panneau secondaire de droite
+                      </div>
+                      <input
+                        className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
+                        value={app?.led_small_bottom ?? ""}
+                        onChange={(e) => updateBottom.mutate(e.target.value)}
+                        placeholder="Texte…"
+                      />
                     </div>
-                    <input
-                      className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
-                      value={app?.led_small_top ?? ""}
-                      onChange={(e) => updateTop.mutate(e.target.value)}
-                      placeholder="Écrire..."
-                    />
-                  </div>
-                  <div className="card-surface p-4">
-                    <div className="muted text-sm mb-1">
-                      Panneau secondaire de droite
-                    </div>
-                    <input
-                      className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
-                      value={app?.led_small_bottom ?? ""}
-                      onChange={(e) => updateBottom.mutate(e.target.value)}
-                      placeholder="Écrire..."
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Images / Spotlight */}
-            <div className="lg:col-span-1">
-              <div className="display-title text-base mb-2">
-                Images / Spotlight
-              </div>
-              <div className="card-surface p-4 space-y-3">
-                <div className="flex flex-wrap items-center gap-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={!!app?.mask_spotlight_enabled}
-                      onChange={(e) =>
-                        toggleSpotlight.mutate(e.target.checked as any)
-                      }
-                    />
-                    Activer mode spotlight
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={!!app?.mask_show_on_display}
-                      onChange={(e) =>
-                        toggleSpotlightOnDisplay.mutate(e.target.checked as any)
-                      }
-                    />
-                    Afficher sur écran Display
-                  </label>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button className="btn" onClick={() => setOpenMasks(true)}>
-                    Gérer les images
-                  </button>
-                </div>
-
-                <div className="border-t border-white/10 pt-3 space-y-2">
-                  <div className="display-title text-base">
-                    Cibles (joueurs)
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {(players ?? []).map((p) => {
-                      const selected = (
-                        app?.mask_target_player_ids ?? []
-                      ).includes(p.id)
-                      return (
-                        <label key={p.id} className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={(e) => {
-                              const prev = (app?.mask_target_player_ids ??
-                                []) as string[]
-                              const next = e.target.checked
-                                ? Array.from(new Set([...prev, p.id]))
-                                : prev.filter((id) => id !== p.id)
-                              updateTargets.mutate(next as any)
-                            }}
-                          />
-                          {p.first_name} {p.last_name}
-                        </label>
-                      )
-                    })}
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Bottom bento grid: growing sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-            <div>
-              <div className="display-title text-base mb-2">Messages</div>
-              <MessageHistory showTitle={false} />
+          {/* Section 2: Shops control */}
+          <div className="mb-6">
+            <div className="display-title text-xl md:text-2xl mb-4">
+              Boutiques
             </div>
-            <div>
-              <div className="display-title text-base mb-2">Inventaire</div>
-              <InventoryList showTitle={false} />
-            </div>
-            <div>
-              <div className="display-title text-base mb-2">
-                Aperçu masque (sans effet)
+            <div className="card-surface p-4">
+              <div className="space-y-3 text-sm">
+                <div className="text-xs uppercase tracking-wider muted">
+                  Statut
+                </div>
+                {[
+                  { label: "Boutique 1", data: shop1 },
+                  { label: "Boutique 2", data: shop2 },
+                ].map((s) => (
+                  <div key={s.label} className="flex items-center gap-2">
+                    <div className="w-20 muted">{s.label}</div>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!!s.data?.shop?.unlocked}
+                        onChange={(e) =>
+                          s.data?.shop?.id &&
+                          toggleUnlock.mutate({
+                            id: s.data.shop.id,
+                            unlocked: e.target.checked,
+                          })
+                        }
+                      />
+                      Déverrouillé
+                    </label>
+                  </div>
+                ))}
+                <div className="text-xs uppercase tracking-wider muted pt-2">
+                  Gestion des items
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="btn" onClick={() => setOpenModal("shop1")}>
+                    Gérer les items de la boutique 1
+                  </button>
+                  <button className="btn" onClick={() => setOpenModal("shop2")}>
+                    Gérer les items de la boutique 2
+                  </button>
+                </div>
               </div>
-              <div className="card-surface p-4">
-                <PointerPreview
-                  imageUrl={activeMask?.url || ""}
-                  pointer={
-                    serverPointer
-                      ? { x: serverPointer.x, y: serverPointer.y }
-                      : null
-                  }
-                  onCommit={(x, y) => updatePointer({ x, y })}
-                />
+            </div>
+          </div>
+
+          {/* Section 3: Inventory and inventory transfer */}
+          <div className="mb-6">
+            <div className="display-title text-xl md:text-2xl mb-4">
+              Inventaire & Transferts
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <div className="text-xs uppercase tracking-wider muted mb-2">
+                  Inventaire
+                </div>
+                <InventoryList showTitle={false} />
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wider muted mb-2">
+                  Transferts d'inventaire
+                </div>
+                <div className="card-surface p-4 space-y-3 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+                    <div className="text-xs uppercase tracking-wider muted">
+                      Joueur
+                    </div>
+                    <select
+                      className="bg-white/10 border border-white/10 rounded px-2 py-2"
+                      value={selectedPlayerId}
+                      onChange={(e) => {
+                        setSelectedPlayerId(e.target.value)
+                        setPersonalItem("")
+                      }}
+                    >
+                      <option value="">Sélectionner…</option>
+                      {(players ?? []).map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.first_name} {p.last_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Common -> Player */}
+                    <div className="bg-white/5 rounded p-3 border border-white/10">
+                      <div className="text-xs uppercase tracking-wider muted mb-2">
+                        Commun → Joueur
+                      </div>
+                      <div className="space-y-2">
+                        <select
+                          className="w-full bg-white/10 border border-white/10 rounded px-2 py-2"
+                          value={commonItem}
+                          onChange={(e) => setCommonItem(e.target.value)}
+                        >
+                          <option value="">Item…</option>
+                          {(commonInv ?? [])
+                            .filter((i) => (i.quantity ?? 0) > 0)
+                            .map((i) => (
+                              <option key={i.id} value={i.item_name}>
+                                {i.item_name} (x{i.quantity})
+                              </option>
+                            ))}
+                        </select>
+                        {(() => {
+                          const max = Math.max(
+                            0,
+                            (commonInv ?? []).find(
+                              (i) => i.item_name === commonItem
+                            )?.quantity || 0
+                          )
+                          return (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                className="w-24 bg-white/10 border border-white/10 rounded px-2 py-1"
+                                value={qtyToPlayer}
+                                onChange={(e) =>
+                                  setQtyToPlayer(
+                                    Math.max(0, Number(e.target.value || 0))
+                                  )
+                                }
+                                min={0}
+                                max={max}
+                              />
+                              <div className="text-xs uppercase tracking-wider muted">
+                                Max: {max}
+                              </div>
+                              <button
+                                className="btn ml-auto"
+                                disabled={
+                                  !selectedPlayerId ||
+                                  !commonItem ||
+                                  qtyToPlayer <= 0 ||
+                                  qtyToPlayer > max
+                                }
+                                onClick={() => {
+                                  if (
+                                    !selectedPlayerId ||
+                                    !commonItem ||
+                                    qtyToPlayer <= 0 ||
+                                    qtyToPlayer > max
+                                  )
+                                    return
+                                  transferC2P.mutate(
+                                    {
+                                      player_id: selectedPlayerId,
+                                      item_name: commonItem,
+                                      quantity: qtyToPlayer,
+                                    },
+                                    {
+                                      onSuccess: () =>
+                                        show({
+                                          type: "success",
+                                          message:
+                                            "Transfert vers joueur effectué",
+                                        }),
+                                      onError: () =>
+                                        show({
+                                          type: "error",
+                                          message: "Transfert impossible",
+                                        }),
+                                    }
+                                  )
+                                }}
+                              >
+                                Transférer
+                              </button>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Player -> Common */}
+                    <div className="bg-white/5 rounded p-3 border border-white/10">
+                      <div className="text-xs uppercase tracking-wider muted mb-2">
+                        Joueur → Commun
+                      </div>
+                      <div className="space-y-2">
+                        <select
+                          className="w-full bg-white/10 border border-white/10 rounded px-2 py-2"
+                          value={personalItem}
+                          onChange={(e) => setPersonalItem(e.target.value)}
+                          disabled={!selectedPlayerId}
+                        >
+                          <option value="">Item…</option>
+                          {(personalInv ?? [])
+                            .filter((i) => (i.quantity ?? 0) > 0)
+                            .map((i) => (
+                              <option key={i.id} value={i.item_name}>
+                                {i.item_name} (x{i.quantity})
+                              </option>
+                            ))}
+                        </select>
+                        {(() => {
+                          const max = Math.max(
+                            0,
+                            (personalInv ?? []).find(
+                              (i) => i.item_name === personalItem
+                            )?.quantity || 0
+                          )
+                          return (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                className="w-24 bg-white/10 border border-white/10 rounded px-2 py-1"
+                                value={qtyToCommon}
+                                onChange={(e) =>
+                                  setQtyToCommon(
+                                    Math.max(0, Number(e.target.value || 0))
+                                  )
+                                }
+                                min={0}
+                                max={max}
+                                disabled={!selectedPlayerId}
+                              />
+                              <div className="text-xs uppercase tracking-wider muted">
+                                Max: {max}
+                              </div>
+                              <button
+                                className="btn ml-auto"
+                                disabled={
+                                  !selectedPlayerId ||
+                                  !personalItem ||
+                                  qtyToCommon <= 0 ||
+                                  qtyToCommon > max
+                                }
+                                onClick={() => {
+                                  if (
+                                    !selectedPlayerId ||
+                                    !personalItem ||
+                                    qtyToCommon <= 0 ||
+                                    qtyToCommon > max
+                                  )
+                                    return
+                                  transferP2C.mutate(
+                                    {
+                                      player_id: selectedPlayerId,
+                                      item_name: personalItem,
+                                      quantity: qtyToCommon,
+                                    },
+                                    {
+                                      onSuccess: () =>
+                                        show({
+                                          type: "success",
+                                          message:
+                                            "Transfert vers commun effectué",
+                                        }),
+                                      onError: () =>
+                                        show({
+                                          type: "error",
+                                          message: "Transfert impossible",
+                                        }),
+                                    }
+                                  )
+                                }}
+                              >
+                                Transférer
+                              </button>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* Section 4: Images and mask snipper */}
+          <div className="mb-6">
+            <div className="display-title text-xl md:text-2xl mb-4">
+              Images & Masque
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Images / Spotlight controls */}
+              <div>
+                <div className="text-xs uppercase tracking-wider muted mb-2">
+                  Images / Spotlight
+                </div>
+                <div className="card-surface p-4 space-y-3">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!!app?.mask_spotlight_enabled}
+                        onChange={(e) =>
+                          toggleSpotlight.mutate(e.target.checked as any)
+                        }
+                      />
+                      Activer mode spotlight
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!!app?.mask_show_on_display}
+                        onChange={(e) =>
+                          toggleSpotlightOnDisplay.mutate(
+                            e.target.checked as any
+                          )
+                        }
+                      />
+                      Afficher sur écran Display
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button className="btn" onClick={() => setOpenMasks(true)}>
+                      Gérer les images
+                    </button>
+                  </div>
+
+                  <div className="border-t border-white/10 pt-3 space-y-3 text-sm">
+                    <div className="text-xs uppercase tracking-wider muted">
+                      Statut actuel
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="muted">Image active:</div>
+                      <div className="truncate max-w-[220px]">
+                        {activeMask?.name ||
+                          (activeMask?.url ? "Image active" : "Aucune")}
+                      </div>
+                      {activeMask?.id && (
+                        <>
+                          <button
+                            className="btn"
+                            onClick={() => {
+                              const q =
+                                ((activeMask.rotation_quarters ?? 0) + 3) % 4
+                              setRotationQuarters.mutate({
+                                id: activeMask.id,
+                                rotation_quarters: q,
+                              })
+                            }}
+                            title="Tourner -90°"
+                          >
+                            ⟲
+                          </button>
+                          <button
+                            className="btn"
+                            onClick={() => {
+                              const q =
+                                ((activeMask.rotation_quarters ?? 0) + 1) % 4
+                              setRotationQuarters.mutate({
+                                id: activeMask.id,
+                                rotation_quarters: q,
+                              })
+                            }}
+                            title="Tourner +90°"
+                          >
+                            ⟳
+                          </button>
+                          <button className="btn" onClick={() => deactivate()}>
+                            Désactiver
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="text-xs uppercase tracking-wider muted">
+                      Cibles (joueurs)
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(players ?? []).map((p) => {
+                        const selected = (
+                          app?.mask_target_player_ids ?? []
+                        ).includes(p.id)
+                        return (
+                          <label key={p.id} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={(e) => {
+                                const prev = (app?.mask_target_player_ids ??
+                                  []) as string[]
+                                const next = e.target.checked
+                                  ? Array.from(new Set([...prev, p.id]))
+                                  : prev.filter((id) => id !== p.id)
+                                updateTargets.mutate(next as any)
+                              }}
+                            />
+                            {p.first_name} {p.last_name}
+                          </label>
+                        )
+                      })}
+                    </div>
+
+                    <div className="text-xs uppercase tracking-wider muted pt-2">
+                      Changer l'image
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-center">
+                      <input
+                        className="bg-white/10 border border-white/10 rounded px-2 py-1"
+                        placeholder="Rechercher…"
+                        value={maskQuery}
+                        onChange={(e) => setMaskQuery(e.target.value)}
+                      />
+                      <select
+                        className="bg-white/10 border border-white/10 rounded px-2 py-2"
+                        value={pickerId}
+                        onChange={(e) => setPickerId(e.target.value)}
+                      >
+                        <option value="">Sélectionner…</option>
+                        {(() => {
+                          const q = maskQuery.trim().toLowerCase()
+                          const list = (masks ?? []).filter((m) =>
+                            q
+                              ? (m.name || "").toLowerCase().includes(q) ||
+                                (m.storage_path || "").toLowerCase().includes(q)
+                              : true
+                          )
+                          list.sort((a, b) =>
+                            (a.name || "").localeCompare(b.name || "")
+                          )
+                          return list.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {(m.name || "").slice(0, 60)}
+                            </option>
+                          ))
+                        })()}
+                      </select>
+                      <button
+                        className="btn"
+                        disabled={
+                          !pickerId || pickerId === (activeMask?.id || "")
+                        }
+                        onClick={() => {
+                          if (!pickerId) return
+                          activate(pickerId)
+                          show({ type: "success", message: "Image activée" })
+                        }}
+                      >
+                        Activer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mask snipper / pointer preview */}
+              <div>
+                <div className="text-xs uppercase tracking-wider muted mb-2">
+                  Aperçu masque (sans effet)
+                </div>
+                <div className="card-surface p-4">
+                  <PointerPreview
+                    imageUrl={activeMask?.url || ""}
+                    pointer={
+                      serverPointer
+                        ? { x: serverPointer.x, y: serverPointer.y }
+                        : null
+                    }
+                    onCommit={(x, y) => updatePointer({ x, y })}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Messages */}
+          <div className="mb-2">
+            <div className="display-title text-xl md:text-2xl mb-4">
+              Messages
+            </div>
+            <MessageHistory showTitle={false} />
           </div>
         </>
       )}
@@ -318,7 +680,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right content: players */}
-          <div className="lg:col-span-3 lg:max-h-[calc(100vh-2rem)] lg:overflow-auto lg:min-h-0 pr-1">
+          <div className="lg:col-span-3 lg:min-h-0 pr-1">
             <h2 className="display-title text-lg mb-3">Joueurs</h2>
             <div className="space-y-16">
               {(players ?? []).map((p) => (
@@ -368,7 +730,9 @@ export default function Dashboard() {
             )
             return (
               <div className="card-surface p-3">
-                <div className="text-sm mb-2">Téléverser une image</div>
+                <div className="text-xs uppercase tracking-wider muted mb-2">
+                  Téléverser une image
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
                   <select
                     className="bg-white/10 border border-white/10 rounded px-2 py-2"
@@ -488,14 +852,17 @@ export default function Dashboard() {
                           return (
                             <div
                               key={m.id}
-                              className="p-2 rounded bg-white/5 flex flex-col gap-2"
+                              className="p-2 rounded bg-white/5 flex flex-col gap-2 text-white"
                             >
                               <img
                                 src={m.url}
                                 className="w-full h-28 object-contain bg-black"
                                 alt={m.name}
                               />
-                              <div className="text-sm truncate" title={m.name}>
+                              <div
+                                className="text-sm truncate font-bold"
+                                title={m.name}
+                              >
                                 {m.name}
                               </div>
                               <div
@@ -507,48 +874,9 @@ export default function Dashboard() {
                               <div className="muted text-xs">
                                 {m.width}×{m.height}
                               </div>
-                              <div className="text-xs flex items-center gap-2 mt-1">
-                                <span>Rotation</span>
-                                <button
-                                  className="btn btn-ghost px-2"
-                                  onClick={() => {
-                                    const q =
-                                      ((m.rotation_quarters ?? 0) + 3) % 4
-                                    setRotationQuarters.mutate({
-                                      id: m.id,
-                                      rotation_quarters: q,
-                                    })
-                                  }}
-                                  title="Tourner -90°"
-                                >
-                                  ⟲
-                                </button>
-                                <button
-                                  className="btn btn-ghost px-2"
-                                  onClick={() => {
-                                    const q =
-                                      ((m.rotation_quarters ?? 0) + 1) % 4
-                                    setRotationQuarters.mutate({
-                                      id: m.id,
-                                      rotation_quarters: q,
-                                    })
-                                  }}
-                                  title="Tourner +90°"
-                                >
-                                  ⟳
-                                </button>
-                                <span className="muted">
-                                  {((m.rotation_quarters ?? 0) * 90) % 360}°
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
+                              <div className="mt-1">
                                 {activeMaskId === m.id ? (
-                                  <button
-                                    className="btn"
-                                    onClick={() => deactivate()}
-                                  >
-                                    Désactiver
-                                  </button>
+                                  <span className="badge">Actif</span>
                                 ) : (
                                   <button
                                     className="btn"
@@ -557,14 +885,6 @@ export default function Dashboard() {
                                     Activer
                                   </button>
                                 )}
-                                <button
-                                  className="btn bg-red-600 hover:bg-red-700"
-                                  onClick={() =>
-                                    deleteMask.mutate({ id: m.id, url: m.url })
-                                  }
-                                >
-                                  Supprimer
-                                </button>
                               </div>
                             </div>
                           )
@@ -599,7 +919,7 @@ export default function Dashboard() {
           </div>
         </div>
       </Modal>
-    </>
+    </div>
   )
 }
 
