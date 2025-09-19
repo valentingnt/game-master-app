@@ -8,6 +8,8 @@ import {
   subscribePlayers,
   subscribeShops,
   subscribeMessages,
+  subscribeMaskImages,
+  subscribeMaskPointer,
 } from "./lib/realtime"
 import "./index.css"
 import App from "./routes/App"
@@ -28,6 +30,8 @@ subscribeInventory(queryClient)
 subscribePlayers(queryClient)
 subscribeShops(queryClient)
 subscribeMessages(queryClient)
+subscribeMaskImages(queryClient)
+subscribeMaskPointer(queryClient)
 
 const router = createBrowserRouter([
   // Player layout hosts shops and player pages

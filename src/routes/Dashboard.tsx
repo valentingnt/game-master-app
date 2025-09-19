@@ -1,12 +1,30 @@
-import { useAppState, useUpdateAppStateField } from "../lib/hooks"
+import {
+  useAppState,
+  useUpdateAppStateField,
+  useMaskImages,
+  useUploadMaskImage,
+  useDeleteMaskImage,
+  useActivateMask,
+  useToggleSpotlight,
+  useToggleSpotlightOnDisplay,
+  useUpdateSpotlightTargets,
+} from "../lib/hooks"
 import TokenCounter from "../ui/TokenCounter"
 import DayController from "../ui/DayController"
 import InventoryList from "../ui/InventoryList"
 import PlayerCard from "../ui/PlayerCard"
 import { usePlayers, useShop, useToggleShopUnlock } from "../lib/hooks"
 import ShopItemsModal from "../ui/ShopItemsModal"
+import Modal from "../ui/Modal"
 import MessageHistory from "../ui/MessageHistory"
-import { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
+import {
+  useActiveMaskImage,
+  useUpdateMaskPointer,
+  useMaskPointer,
+  useToggleMaskRotation,
+  useSetMaskRotationQuarters,
+} from "../lib/hooks"
 
 export default function Dashboard() {
   const { data: players } = usePlayers()
@@ -14,10 +32,36 @@ export default function Dashboard() {
   const shop2 = useShop("shop2").data
   const toggleUnlock = useToggleShopUnlock()
   const [openModal, setOpenModal] = useState<null | "shop1" | "shop2">(null)
+  const [openMasks, setOpenMasks] = useState(false)
+  const [maskQuery, setMaskQuery] = useState("")
   const app = useAppState().data
   const updateMain = useUpdateAppStateField("led_main_text")
   const updateTop = useUpdateAppStateField("led_small_top")
   const updateBottom = useUpdateAppStateField("led_small_bottom")
+  const { data: masks } = useMaskImages()
+  const uploadMask = useUploadMaskImage()
+  const deleteMask = useDeleteMaskImage()
+  const { activate, deactivate } = useActivateMask()
+  const activeMaskId = app?.active_mask_id ?? null
+  const activeMask = useActiveMaskImage().data
+  const toggleSpotlight = useToggleSpotlight()
+  const toggleSpotlightOnDisplay = useToggleSpotlightOnDisplay()
+  const updateTargets = useUpdateSpotlightTargets()
+  // Pointer update
+  const { mutate: updatePointer } = useUpdateMaskPointer()
+  const serverPointer = useMaskPointer().data
+  const toggleRotation = useToggleMaskRotation()
+  const setRotationQuarters = useSetMaskRotationQuarters()
+  type MaskNode =
+    | { _type: "dir"; children: Record<string, MaskNode> }
+    | { _type: "file"; item: any }
+
+  // Upload state (used inside modal)
+  const [selectedFolder, setSelectedFolder] = useState<string>("/")
+  const [customFolder, setCustomFolder] = useState<string>("")
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadName, setUploadName] = useState<string>("")
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -55,6 +99,65 @@ export default function Dashboard() {
                   onChange={(e) => updateBottom.mutate(e.target.value)}
                   placeholder="Écrire..."
                 />
+              </div>
+            </div>
+          </section>
+          <section className="card-surface p-4 space-y-3">
+            <div className="display-title text-base">Images / Spotlight</div>
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={!!app?.mask_spotlight_enabled}
+                  onChange={(e) =>
+                    toggleSpotlight.mutate(e.target.checked as any)
+                  }
+                />
+                Activer mode spotlight
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={!!app?.mask_show_on_display}
+                  onChange={(e) =>
+                    toggleSpotlightOnDisplay.mutate(e.target.checked as any)
+                  }
+                />
+                Afficher sur écran Display
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button className="btn" onClick={() => setOpenMasks(true)}>
+                Gérer les images
+              </button>
+            </div>
+
+            <div className="border-t border-white/10 pt-3 space-y-2">
+              <div className="display-title text-base">Cibles (joueurs)</div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {(players ?? []).map((p) => {
+                  const selected = (app?.mask_target_player_ids ?? []).includes(
+                    p.id
+                  )
+                  return (
+                    <label key={p.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={(e) => {
+                          const prev = (app?.mask_target_player_ids ??
+                            []) as string[]
+                          const next = e.target.checked
+                            ? Array.from(new Set([...prev, p.id]))
+                            : prev.filter((id) => id !== p.id)
+                          updateTargets.mutate(next as any)
+                        }}
+                      />
+                      {p.first_name} {p.last_name}
+                    </label>
+                  )
+                })}
               </div>
             </div>
           </section>
@@ -114,6 +217,19 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      {/* GM preview canvas (no mask) */}
+      <div className="card-surface p-4 mt-6">
+        <div className="display-title text-base mb-2">
+          Aperçu masque (sans effet)
+        </div>
+        <PointerPreview
+          imageUrl={activeMask?.url || ""}
+          pointer={
+            serverPointer ? { x: serverPointer.x, y: serverPointer.y } : null
+          }
+          onCommit={(x, y) => updatePointer({ x, y })}
+        />
+      </div>
       {openModal && (
         <ShopItemsModal
           shopSlug={openModal}
@@ -121,6 +237,416 @@ export default function Dashboard() {
           onClose={() => setOpenModal(null)}
         />
       )}
+      <Modal
+        open={openMasks}
+        onClose={() => setOpenMasks(false)}
+        title="Images (arborescence)"
+        maxWClass="max-w-6xl"
+      >
+        <div className="space-y-3">
+          {(() => {
+            const folders = new Set<string>()
+            folders.add("/")
+            const addParents = (p: string) => {
+              const segs = p.split("/").filter(Boolean)
+              let acc: string[] = []
+              for (const s of segs) {
+                acc.push(s)
+                folders.add("/" + acc.join("/"))
+              }
+            }
+            for (const m of masks ?? []) {
+              const sp = (m.storage_path || "").split("/").filter(Boolean)
+              if (sp.length > 1) {
+                const folder = "/" + sp.slice(0, -1).join("/")
+                addParents(folder)
+              }
+            }
+            const sortedFolders = Array.from(folders).sort((a, b) =>
+              a.localeCompare(b)
+            )
+            return (
+              <div className="card-surface p-3">
+                <div className="text-sm mb-2">Téléverser une image</div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
+                  <select
+                    className="bg-white/10 border border-white/10 rounded px-2 py-2"
+                    value={selectedFolder}
+                    onChange={(e) => setSelectedFolder(e.target.value)}
+                  >
+                    {sortedFolders.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className="bg-white/10 border border-white/10 rounded px-2 py-2"
+                    placeholder="Ou nouveau dossier (ex: /donjon/salle1)"
+                    value={customFolder}
+                    onChange={(e) => setCustomFolder(e.target.value)}
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null
+                      setUploadFile(f)
+                      setUploadName(f ? f.name : "")
+                    }}
+                  />
+                  <input
+                    className="bg-white/10 border border-white/10 rounded px-2 py-2"
+                    placeholder="Nom de l'image"
+                    value={uploadName}
+                    onChange={(e) => setUploadName(e.target.value)}
+                  />
+                </div>
+                <div className="mt-2">
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      if (!uploadFile || !uploadName) return
+                      const folderPath = (
+                        customFolder ||
+                        selectedFolder ||
+                        "/"
+                      ).trim()
+                      const normalized =
+                        folderPath === "/"
+                          ? undefined
+                          : folderPath.replace(/^\/+/, "")
+                      uploadMask.mutate({
+                        file: uploadFile,
+                        name: uploadName,
+                        folder: normalized,
+                      })
+                      setUploadFile(null)
+                      setUploadName("")
+                    }}
+                  >
+                    Téléverser
+                  </button>
+                </div>
+              </div>
+            )
+          })()}
+          <input
+            value={maskQuery}
+            onChange={(e) => setMaskQuery(e.target.value)}
+            placeholder="Rechercher..."
+            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
+          />
+          <div className="max-h-[70vh] overflow-auto pr-1">
+            {(() => {
+              const list = (masks ?? []).filter((m) => {
+                const matchQ = maskQuery.trim()
+                  ? (m.name || "")
+                      .toLowerCase()
+                      .includes(maskQuery.toLowerCase()) ||
+                    (m.storage_path || "")
+                      .toLowerCase()
+                      .includes(maskQuery.toLowerCase())
+                  : true
+                return matchQ
+              })
+              const tree: Record<string, MaskNode> = {}
+              for (const m of list) {
+                const path = (m.storage_path || m.name || "")
+                  .split("/")
+                  .filter(Boolean)
+                let cursor = tree
+                for (let i = 0; i < path.length - 1; i++) {
+                  const seg = String(path[i])
+                  cursor[seg] = cursor[seg] || { _type: "dir", children: {} }
+                  cursor = (cursor[seg] as any).children
+                }
+                const leaf = String(path[path.length - 1] || m.name)
+                cursor[leaf] = { _type: "file", item: m }
+              }
+              const CollapsibleTree: React.FC<{
+                node: Record<string, MaskNode>
+                base?: string[]
+              }> = ({ node, base = [] }) => {
+                const [openDirs, setOpenDirs] = React.useState<
+                  Record<string, boolean>
+                >({})
+                const toggle = (path: string) =>
+                  setOpenDirs((s) => ({ ...s, [path]: !s[path] }))
+                const entries = Object.entries(node).sort((a, b) =>
+                  a[0].localeCompare(b[0])
+                )
+                const dirs = entries.filter(([, n]) => n._type === "dir")
+                const files = entries.filter(([, n]) => n._type === "file")
+                return (
+                  <div className="pl-2">
+                    {files.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-3">
+                        {files.map(([name, n]) => {
+                          const m = (n as any).item
+                          return (
+                            <div
+                              key={m.id}
+                              className="p-2 rounded bg-white/5 flex flex-col gap-2"
+                            >
+                              <img
+                                src={m.url}
+                                className="w-full h-28 object-contain bg-black"
+                                alt={m.name}
+                              />
+                              <div className="text-sm truncate" title={m.name}>
+                                {m.name}
+                              </div>
+                              <div
+                                className="muted text-xs truncate"
+                                title={m.storage_path || ""}
+                              >
+                                {m.storage_path || ""}
+                              </div>
+                              <div className="muted text-xs">
+                                {m.width}×{m.height}
+                              </div>
+                              <div className="text-xs flex items-center gap-2 mt-1">
+                                <span>Rotation</span>
+                                <button
+                                  className="btn btn-ghost px-2"
+                                  onClick={() => {
+                                    const q =
+                                      ((m.rotation_quarters ?? 0) + 3) % 4
+                                    setRotationQuarters.mutate({
+                                      id: m.id,
+                                      rotation_quarters: q,
+                                    })
+                                  }}
+                                  title="Tourner -90°"
+                                >
+                                  ⟲
+                                </button>
+                                <button
+                                  className="btn btn-ghost px-2"
+                                  onClick={() => {
+                                    const q =
+                                      ((m.rotation_quarters ?? 0) + 1) % 4
+                                    setRotationQuarters.mutate({
+                                      id: m.id,
+                                      rotation_quarters: q,
+                                    })
+                                  }}
+                                  title="Tourner +90°"
+                                >
+                                  ⟳
+                                </button>
+                                <span className="muted">
+                                  {((m.rotation_quarters ?? 0) * 90) % 360}°
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                {activeMaskId === m.id ? (
+                                  <button
+                                    className="btn"
+                                    onClick={() => deactivate()}
+                                  >
+                                    Désactiver
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="btn"
+                                    onClick={() => activate(m.id)}
+                                  >
+                                    Activer
+                                  </button>
+                                )}
+                                <button
+                                  className="btn bg-red-600 hover:bg-red-700"
+                                  onClick={() =>
+                                    deleteMask.mutate({ id: m.id, url: m.url })
+                                  }
+                                >
+                                  Supprimer
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {dirs.map(([name, n]) => {
+                      const pathKey = [...base, name].join("/")
+                      const isOpen = openDirs[pathKey] ?? true
+                      return (
+                        <div key={name} className="mb-2">
+                          <button
+                            className="text-xs muted hover:text-white transition-colors"
+                            onClick={() => toggle(pathKey)}
+                          >
+                            {isOpen ? "▾" : "▸"} /{pathKey}
+                          </button>
+                          {isOpen && (
+                            <CollapsibleTree
+                              node={(n as any).children}
+                              base={[...base, name]}
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              }
+              return <CollapsibleTree node={tree} />
+            })()}
+          </div>
+        </div>
+      </Modal>
     </>
+  )
+}
+
+function PointerPreview({
+  imageUrl,
+  pointer,
+  onCommit,
+}: {
+  imageUrl: string
+  pointer: { x: number; y: number } | null
+  onCommit: (x: number, y: number) => void
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const [img, setImg] = useState<HTMLImageElement | null>(null)
+  const [drag, setDrag] = useState(false)
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    if (!imageUrl) {
+      setImg(null)
+      return
+    }
+    const i = new Image()
+    i.crossOrigin = "anonymous"
+    i.onload = () => setImg(i)
+    i.src = imageUrl
+  }, [imageUrl])
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")!
+
+    const resize = () => {
+      const w = canvas.parentElement?.clientWidth ?? 600
+      const maxH = 380
+      let targetW = w
+      let targetH = Math.min(maxH, Math.floor((w * 9) / 16))
+      if (img) {
+        const iw = img.naturalWidth
+        const ih = img.naturalHeight
+        const portrait = ih > iw
+        const rIw = portrait ? ih : iw
+        const rIh = portrait ? iw : ih
+        const scale = Math.min(w / rIw, maxH / rIh)
+        targetW = Math.floor(rIw * scale)
+        targetH = Math.floor(rIh * scale)
+      }
+      const dpr = window.devicePixelRatio || 1
+      canvas.style.width = `${targetW}px`
+      canvas.style.height = `${targetH}px`
+      canvas.width = Math.floor(targetW * dpr)
+      canvas.height = Math.floor(targetH * dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      draw()
+    }
+
+    const draw = () => {
+      const dpr = window.devicePixelRatio || 1
+      const cw = canvas.width / dpr
+      const ch = canvas.height / dpr
+      ctx.fillStyle = "#000"
+      ctx.fillRect(0, 0, cw, ch)
+      if (img) {
+        const iw = img.naturalWidth
+        const ih = img.naturalHeight
+        const portrait = ih > iw
+        const rIw = portrait ? ih : iw
+        const rIh = portrait ? iw : ih
+        const scale = Math.min(cw / rIw, ch / rIh)
+        const dw = Math.floor(rIw * scale)
+        const dh = Math.floor(rIh * scale)
+        const dx = Math.floor((cw - dw) / 2)
+        const dy = Math.floor((ch - dh) / 2)
+        const off = document.createElement("canvas")
+        off.width = dw
+        off.height = dh
+        const octx = off.getContext("2d")!
+        octx.save()
+        if (portrait) {
+          octx.translate(dw, 0)
+          octx.rotate(Math.PI / 2)
+          octx.drawImage(img, 0, 0, iw, ih, 0, 0, dh, dw)
+        } else {
+          octx.drawImage(img, 0, 0, iw, ih, 0, 0, dw, dh)
+        }
+        octx.restore()
+        ctx.drawImage(off, dx, dy)
+        ctx.strokeStyle = "#ff3131"
+        ctx.lineWidth = 2
+        ctx.strokeRect(dx + 1, dy + 1, Math.max(0, dw - 2), Math.max(0, dh - 2))
+
+        const cursor = pos ?? pointer
+        if (cursor) {
+          // Draw pointer as red dot (pos in image space 0..rIw/rIh)
+          const px = dx + Math.max(0, Math.min(rIw, cursor.x)) * (dw / rIw)
+          const py = dy + Math.max(0, Math.min(rIh, cursor.y)) * (dh / rIh)
+          ctx.fillStyle = "#ff3131"
+          ctx.beginPath()
+          ctx.arc(px, py, 6, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+    }
+
+    resize()
+    const ro = new ResizeObserver(() => resize())
+    ro.observe(canvas.parentElement || document.body)
+    return () => ro.disconnect()
+  }, [img, pos, pointer])
+
+  const handleMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!drag) return
+    const canvas = canvasRef.current!
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    // Convert to image space based on current drawn rect
+    const ctx = canvas.getContext("2d")!
+    const cw = canvas.clientWidth
+    const ch = canvas.clientHeight
+    const iw = img?.naturalWidth ?? 1
+    const ih = img?.naturalHeight ?? 1
+    const portrait = (img?.naturalHeight ?? 0) > (img?.naturalWidth ?? 0)
+    const rIw = portrait ? ih : iw
+    const rIh = portrait ? iw : ih
+    const scale = Math.min(cw / rIw, ch / rIh)
+    const dw = rIw * scale
+    const dh = rIh * scale
+    const dx = (cw - dw) / 2
+    const dy = (ch - dh) / 2
+    const ix = Math.max(0, Math.min(rIw, (x - dx) / (dw / rIw)))
+    const iy = Math.max(0, Math.min(rIh, (y - dy) / (dh / rIh)))
+    setPos({ x: ix, y: iy })
+  }
+
+  const commit = () => {
+    if (pos) onCommit(pos.x, pos.y)
+    setDrag(false)
+  }
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="w-full h-auto block bg-black"
+      onMouseDown={() => setDrag(true)}
+      onMouseMove={handleMove}
+      onMouseUp={commit}
+      onMouseLeave={commit}
+    />
   )
 }

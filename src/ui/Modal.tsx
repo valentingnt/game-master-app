@@ -6,9 +6,16 @@ type Props = {
   title?: string
   onClose: () => void
   children: React.ReactNode
+  maxWClass?: string
 }
 
-export default function Modal({ open, title, onClose, children }: Props) {
+export default function Modal({
+  open,
+  title,
+  onClose,
+  children,
+  maxWClass,
+}: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const firstFocusable = useRef<HTMLButtonElement | null>(null)
   const openerRef = useRef<HTMLElement | null>(null)
@@ -64,7 +71,9 @@ export default function Modal({ open, title, onClose, children }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-xl card-surface p-4 shadow-xl"
+        className={`w-full ${
+          maxWClass ?? "max-w-xl"
+        } card-surface p-4 shadow-xl`}
       >
         <div className="mb-3 flex items-center justify-between">
           <div className="display-title text-base text-gray-100">{title}</div>
