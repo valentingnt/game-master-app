@@ -444,6 +444,19 @@ export function useUpdateLEDSmallBottom() {
   return useUpdateAppStateField("led_small_bottom")
 }
 
+// Spotlight controls
+export function useToggleSpotlight() {
+  return useUpdateAppStateField("mask_spotlight_enabled" as any)
+}
+
+export function useToggleSpotlightOnDisplay() {
+  return useUpdateAppStateField("mask_show_on_display" as any)
+}
+
+export function useUpdateSpotlightTargets() {
+  return useUpdateAppStateField("mask_target_player_ids" as any)
+}
+
 export function usePlayers() {
   return useQuery({
     queryKey: ["players"],
@@ -1049,7 +1062,15 @@ export function useMaskImages() {
 export function useUploadMaskImage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ file, name }: { file: File; name: string }) => {
+    mutationFn: async ({
+      file,
+      name,
+      folder,
+    }: {
+      file: File
+      name: string
+      folder?: string
+    }) => {
       // Derive dimensions
       const dims = await new Promise<{ width: number; height: number }>(
         (res, rej) => {
@@ -1061,7 +1082,9 @@ export function useUploadMaskImage() {
         }
       )
       const ext = (file.name.split(".").pop() || "png").toLowerCase()
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const base = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const sanitizedFolder = (folder || "").replace(/^\/+|\/+$|\.+$/g, "")
+      const path = sanitizedFolder ? `${sanitizedFolder}/${base}` : base
       const { error: uploadErr } = await supabase.storage
         .from("masks")
         .upload(path, file, {
@@ -1078,6 +1101,7 @@ export function useUploadMaskImage() {
         url,
         width: dims.width,
         height: dims.height,
+        storage_path: path,
       } as any)
       if (insErr) throw insErr
     },
@@ -1115,6 +1139,51 @@ export function useDeleteMaskImage() {
   })
 }
 
+export function useToggleMaskRotation() {
+  const qc = useQueryClient()
+  registerHandler("toggleMaskRotation", async (varsAny: unknown) => {
+    const { id, rotate_90 } = varsAny as { id: string; rotate_90: boolean }
+    const { error } = await supabase
+      .from("mask_images")
+      .update({ rotate_90, rotation_quarters: rotate_90 ? 1 : 0 })
+      .eq("id", id)
+    if (error) throw error
+  })
+  return useMutation({
+    mutationFn: async ({
+      id,
+      rotate_90,
+    }: {
+      id: string
+      rotate_90: boolean
+    }) => {
+      const { error } = await supabase
+        .from("mask_images")
+        .update({ rotate_90, rotation_quarters: rotate_90 ? 1 : 0 })
+        .eq("id", id)
+      if (error) throw error
+    },
+    onMutate: async ({ id, rotate_90 }) => {
+      await qc.cancelQueries({ queryKey: ["mask_images"] })
+      const prev = qc.getQueryData<MaskImage[]>(["mask_images"]) ?? []
+      const next = prev.map((m) =>
+        m.id === id
+          ? { ...m, rotate_90, rotation_quarters: rotate_90 ? 1 : 0 }
+          : m
+      )
+      qc.setQueryData(["mask_images"], next)
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["mask_images"], ctx.prev)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mask_images"] })
+      qc.invalidateQueries({ queryKey: ["active_mask_image"] })
+    },
+  })
+}
+
 export function useActivateMask() {
   const mutate = useUpdateAppStateField("active_mask_id")
   return {
@@ -1145,6 +1214,45 @@ export function useActiveMaskImage() {
       return (data as any) ?? null
     },
     staleTime: 2_000,
+  })
+}
+
+export function useSetMaskRotationQuarters() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      rotation_quarters,
+    }: {
+      id: string
+      rotation_quarters: number
+    }) => {
+      const rq = ((rotation_quarters % 4) + 4) % 4
+      const { error } = await supabase
+        .from("mask_images")
+        .update({ rotation_quarters: rq, rotate_90: rq % 2 !== 0 })
+        .eq("id", id)
+      if (error) throw error
+    },
+    onMutate: async ({ id, rotation_quarters }) => {
+      await qc.cancelQueries({ queryKey: ["mask_images"] })
+      const prev = qc.getQueryData<MaskImage[]>(["mask_images"]) ?? []
+      const rq = ((rotation_quarters % 4) + 4) % 4
+      const next = prev.map((m) =>
+        m.id === id
+          ? { ...m, rotation_quarters: rq, rotate_90: rq % 2 !== 0 }
+          : m
+      )
+      qc.setQueryData(["mask_images"], next)
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["mask_images"], ctx.prev)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mask_images"] })
+      qc.invalidateQueries({ queryKey: ["active_mask_image"] })
+    },
   })
 }
 

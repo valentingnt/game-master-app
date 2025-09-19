@@ -1,6 +1,12 @@
 import { useEffect, useMemo } from "react"
 import { useParams } from "react-router-dom"
-import { useMessages, usePlayers } from "../lib/hooks"
+import {
+  useMessages,
+  usePlayers,
+  useAppState,
+  useActiveMaskImage,
+  useMaskPointer,
+} from "../lib/hooks"
 import {
   FiHeart,
   FiDroplet,
@@ -29,11 +35,15 @@ import {
 import { MdOutlineFastfood } from "react-icons/md"
 import { RxHeight } from "react-icons/rx"
 import { LuWeight } from "react-icons/lu"
+import { GoTrueClient } from "@supabase/supabase-js"
 
 export default function Player() {
   const params = useParams()
   const playerId = params.id as string
   const { data: players } = usePlayers()
+  const { data: app } = useAppState()
+  const { data: activeMask } = useActiveMaskImage()
+  const { data: pointer } = useMaskPointer()
 
   const player = useMemo(
     () => (players ?? []).find((p) => p.id === playerId) ?? null,
@@ -61,6 +71,25 @@ export default function Player() {
 
   return (
     <div className="space-y-8">
+      {/* Spotlight / image overlay */}
+      {activeMask?.url && app?.mask_target_player_ids?.includes(playerId) && (
+        <div className="fixed inset-0 z-40 bg-black">
+          <img
+            src={activeMask.url}
+            alt="mask"
+            className="absolute inset-0 w-full h-full object-contain"
+            style={{
+              transform:
+                typeof activeMask.rotation_quarters === "number"
+                  ? `rotate(${(activeMask.rotation_quarters % 4) * 90}deg)`
+                  : activeMask.rotate_90
+                  ? "rotate(90deg)"
+                  : undefined,
+            }}
+          />
+          {/* If spotlight mode enabled globally, rely on Display for effect; player sees full image or could be extended later */}
+        </div>
+      )}
       {activeMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black">
           <div className="max-w-4xl px-6 text-center">
@@ -191,9 +220,9 @@ export default function Player() {
                               tick={renderTick(radarData)}
                             />
                             <PolarRadiusAxis
-                              domain={[0, maxVal]}
+                              domain={[-0.1, maxVal]}
                               tick={false}
-                              tickCount={6}
+                              tickCount={5}
                               axisLine={false}
                             />
                             <Radar

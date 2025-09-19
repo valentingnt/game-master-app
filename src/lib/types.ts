@@ -6,6 +6,9 @@ export type AppState = {
   led_small_top: string
   led_small_bottom: string
   active_mask_id?: string | null
+  mask_spotlight_enabled?: boolean
+  mask_show_on_display?: boolean
+  mask_target_player_ids?: string[]
 }
 
 export type InventoryItem = {
@@ -74,6 +77,9 @@ export type MaskImage = {
   width?: number | null
   height?: number | null
   created_at?: string
+  storage_path?: string | null
+  rotate_90?: boolean
+  rotation_quarters?: number | null
 }
 
 export type MaskPointer = {

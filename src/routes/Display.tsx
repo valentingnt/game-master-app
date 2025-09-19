@@ -67,8 +67,12 @@ export default function Display() {
     i.src = activeMask.url
   }, [activeMask?.url])
 
-  // Render spotlight with occlusion
+  const showMaskCanvas =
+    !!activeMask?.url && (app?.mask_show_on_display ?? true)
+
+  // Render spotlight with occlusion (or plain image when spotlight disabled)
   useEffect(() => {
+    if (!showMaskCanvas) return
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext("2d", { willReadFrequently: true })
@@ -83,9 +87,10 @@ export default function Display() {
       if (img) {
         const iw = img.naturalWidth
         const ih = img.naturalHeight
-        const portrait = ih > iw
-        const rIw = portrait ? ih : iw
-        const rIh = portrait ? iw : ih
+        const quarters = (((activeMask?.rotation_quarters ?? 0) % 4) + 4) % 4
+        const odd = quarters % 2 !== 0
+        const rIw = odd ? ih : iw
+        const rIh = odd ? iw : ih
         const scale = Math.min(vw / rIw, vh / rIh)
         targetW = Math.floor(rIw * scale)
         targetH = Math.floor(rIh * scale)
@@ -108,12 +113,13 @@ export default function Display() {
       ctx.fillStyle = "#000"
       ctx.fillRect(0, 0, cw, ch)
       if (!img) return
-      // Fit image into canvas preserving aspect ratio
+      // Fit image into canvas preserving aspect ratio considering rotation
       const iw = img.naturalWidth
       const ih = img.naturalHeight
-      const portrait = ih > iw
-      const rIw = portrait ? ih : iw
-      const rIh = portrait ? iw : ih
+      const quarters = (((activeMask?.rotation_quarters ?? 0) % 4) + 4) % 4
+      const odd = quarters % 2 !== 0
+      const rIw = odd ? ih : iw
+      const rIh = odd ? iw : ih
       // Scale to fit within canvas bounds (contain)
       const scale = Math.min(cw / rIw, ch / rIh)
       const dw = Math.floor(rIw * scale)
@@ -121,16 +127,24 @@ export default function Display() {
       const dx = Math.floor((cw - dw) / 2)
       const dy = Math.floor((ch - dh) / 2)
       geomRef.current = { dx, dy, dw, dh, rIw, rIh }
-      // Draw mask to offscreen (rotate if portrait) and read pixels
+      // Draw mask to offscreen with rotation
       const off = document.createElement("canvas")
       off.width = dw
       off.height = dh
       const offCtx = off.getContext("2d", { willReadFrequently: true })!
       offCtx.save()
-      if (portrait) {
-        // rotate 90deg clockwise to render as landscape inside offscreen area
+      // Apply 0/90/180/270 rotation
+      if (quarters === 1) {
         offCtx.translate(dw, 0)
         offCtx.rotate(Math.PI / 2)
+        offCtx.drawImage(img, 0, 0, iw, ih, 0, 0, dh, dw)
+      } else if (quarters === 2) {
+        offCtx.translate(dw, dh)
+        offCtx.rotate(Math.PI)
+        offCtx.drawImage(img, 0, 0, iw, ih, 0, 0, dw, dh)
+      } else if (quarters === 3) {
+        offCtx.translate(0, dh)
+        offCtx.rotate(-Math.PI / 2)
         offCtx.drawImage(img, 0, 0, iw, ih, 0, 0, dh, dw)
       } else {
         offCtx.drawImage(img, 0, 0, iw, ih, 0, 0, dw, dh)
@@ -165,6 +179,12 @@ export default function Display() {
       ctx.lineWidth = 2
       ctx.strokeRect(dx + 1, dy + 1, Math.max(0, dw - 2), Math.max(0, dh - 2))
       ctx.restore()
+
+      // If spotlight disabled, draw the image plainly and return
+      if (app && app.mask_spotlight_enabled === false) {
+        ctx.drawImage(off, dx, dy)
+        return
+      }
 
       // Determine spotlight center
       let cx = hover ? hover.x - dx : undefined
@@ -251,7 +271,15 @@ export default function Display() {
       window.removeEventListener("resize", resize)
       if (rafId) cancelAnimationFrame(rafId)
     }
-  }, [img, hover, pointer])
+  }, [
+    img,
+    hover,
+    pointer,
+    app?.mask_spotlight_enabled,
+    activeMask?.rotate_90,
+    activeMask?.rotation_quarters,
+    showMaskCanvas,
+  ])
 
   return (
     <div className="min-h-screen app-surface">
@@ -307,78 +335,86 @@ export default function Display() {
           </div>
         </section>
 
-        {/* Canvas placed below all other elements, full width with 16:9 height and fullscreen toggle */}
-        <section className="-mx-4">
-          <div
-            ref={containerRef}
-            className="relative flex justify-center items-center"
-          >
-            <canvas
-              ref={canvasRef}
-              className="block bg-black"
-              onMouseDown={(e) => {
-                setDragging(true)
-                const rect = (
-                  e.target as HTMLCanvasElement
-                ).getBoundingClientRect()
-                setHover({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-              }}
-              onMouseMove={(e) => {
-                if (!dragging) return
-                const rect = (
-                  e.target as HTMLCanvasElement
-                ).getBoundingClientRect()
-                setHover({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-              }}
-              onMouseUp={() => {
-                const g = geomRef.current
-                if (g && hover) {
-                  const ix = Math.max(
-                    0,
-                    Math.min(g.rIw, (hover.x - g.dx) / (g.dw / g.rIw))
-                  )
-                  const iy = Math.max(
-                    0,
-                    Math.min(g.rIh, (hover.y - g.dy) / (g.dh / g.rIh))
-                  )
-                  updatePointer({ x: ix, y: iy })
-                  const cx = g.dx + (ix / g.rIw) * g.dw
-                  const cy = g.dy + (iy / g.rIh) * g.dh
-                  smoothRef.current = { x: cx, y: cy }
-                  commitLockUntilRef.current = Date.now() + 300
-                }
-                setDragging(false)
-                setHover(null)
-              }}
-              onMouseLeave={() => {
-                const g = geomRef.current
-                if (g && hover) {
-                  const ix = Math.max(
-                    0,
-                    Math.min(g.rIw, (hover.x - g.dx) / (g.dw / g.rIw))
-                  )
-                  const iy = Math.max(
-                    0,
-                    Math.min(g.rIh, (hover.y - g.dy) / (g.dh / g.rIh))
-                  )
-                  updatePointer({ x: ix, y: iy })
-                  const cx = g.dx + (ix / g.rIw) * g.dw
-                  const cy = g.dy + (iy / g.rIh) * g.dh
-                  smoothRef.current = { x: cx, y: cy }
-                  commitLockUntilRef.current = Date.now() + 300
-                }
-                setDragging(false)
-                setHover(null)
-              }}
-            />
-            <button
-              className="btn btn-ghost absolute top-2 right-2"
-              onClick={toggleFullscreen}
+        {/* Canvas only shown when an image is active and display is enabled */}
+        {showMaskCanvas && (
+          <section className="-mx-4">
+            <div
+              ref={containerRef}
+              className="relative flex justify-center items-center"
             >
-              Plein écran
-            </button>
-          </div>
-        </section>
+              <canvas
+                ref={canvasRef}
+                className="block bg-black"
+                onMouseDown={(e) => {
+                  setDragging(true)
+                  const rect = (
+                    e.target as HTMLCanvasElement
+                  ).getBoundingClientRect()
+                  setHover({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                  })
+                }}
+                onMouseMove={(e) => {
+                  if (!dragging) return
+                  const rect = (
+                    e.target as HTMLCanvasElement
+                  ).getBoundingClientRect()
+                  setHover({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                  })
+                }}
+                onMouseUp={() => {
+                  const g = geomRef.current
+                  if (g && hover) {
+                    const ix = Math.max(
+                      0,
+                      Math.min(g.rIw, (hover.x - g.dx) / (g.dw / g.rIw))
+                    )
+                    const iy = Math.max(
+                      0,
+                      Math.min(g.rIh, (hover.y - g.dy) / (g.dh / g.rIh))
+                    )
+                    updatePointer({ x: ix, y: iy })
+                    const cx = g.dx + (ix / g.rIw) * g.dw
+                    const cy = g.dy + (iy / g.rIh) * g.dh
+                    smoothRef.current = { x: cx, y: cy }
+                    commitLockUntilRef.current = Date.now() + 300
+                  }
+                  setDragging(false)
+                  setHover(null)
+                }}
+                onMouseLeave={() => {
+                  const g = geomRef.current
+                  if (g && hover) {
+                    const ix = Math.max(
+                      0,
+                      Math.min(g.rIw, (hover.x - g.dx) / (g.dw / g.rIw))
+                    )
+                    const iy = Math.max(
+                      0,
+                      Math.min(g.rIh, (hover.y - g.dy) / (g.dh / g.rIh))
+                    )
+                    updatePointer({ x: ix, y: iy })
+                    const cx = g.dx + (ix / g.rIw) * g.dw
+                    const cy = g.dy + (iy / g.rIh) * g.dh
+                    smoothRef.current = { x: cx, y: cy }
+                    commitLockUntilRef.current = Date.now() + 300
+                  }
+                  setDragging(false)
+                  setHover(null)
+                }}
+              />
+              <button
+                className="btn btn-ghost absolute top-2 right-2"
+                onClick={toggleFullscreen}
+              >
+                Plein écran
+              </button>
+            </div>
+          </section>
+        )}
       </main>
     </div>
   )

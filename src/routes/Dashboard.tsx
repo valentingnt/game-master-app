@@ -5,6 +5,9 @@ import {
   useUploadMaskImage,
   useDeleteMaskImage,
   useActivateMask,
+  useToggleSpotlight,
+  useToggleSpotlightOnDisplay,
+  useUpdateSpotlightTargets,
 } from "../lib/hooks"
 import TokenCounter from "../ui/TokenCounter"
 import DayController from "../ui/DayController"
@@ -19,6 +22,8 @@ import {
   useActiveMaskImage,
   useUpdateMaskPointer,
   useMaskPointer,
+  useToggleMaskRotation,
+  useSetMaskRotationQuarters,
 } from "../lib/hooks"
 
 export default function Dashboard() {
@@ -39,9 +44,24 @@ export default function Dashboard() {
   const { activate, deactivate } = useActivateMask()
   const activeMaskId = app?.active_mask_id ?? null
   const activeMask = useActiveMaskImage().data
+  const toggleSpotlight = useToggleSpotlight()
+  const toggleSpotlightOnDisplay = useToggleSpotlightOnDisplay()
+  const updateTargets = useUpdateSpotlightTargets()
   // Pointer update
   const { mutate: updatePointer } = useUpdateMaskPointer()
   const serverPointer = useMaskPointer().data
+  const toggleRotation = useToggleMaskRotation()
+  const setRotationQuarters = useSetMaskRotationQuarters()
+  type MaskNode =
+    | { _type: "dir"; children: Record<string, MaskNode> }
+    | { _type: "file"; item: any }
+
+  // Upload state (used inside modal)
+  const [selectedFolder, setSelectedFolder] = useState<string>("/")
+  const [customFolder, setCustomFolder] = useState<string>("")
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadName, setUploadName] = useState<string>("")
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -83,22 +103,62 @@ export default function Dashboard() {
             </div>
           </section>
           <section className="card-surface p-4 space-y-3">
-            <div className="display-title text-base">Images masque (B/N)</div>
+            <div className="display-title text-base">Images / Spotlight</div>
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={!!app?.mask_spotlight_enabled}
+                  onChange={(e) =>
+                    toggleSpotlight.mutate(e.target.checked as any)
+                  }
+                />
+                Activer mode spotlight
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={!!app?.mask_show_on_display}
+                  onChange={(e) =>
+                    toggleSpotlightOnDisplay.mutate(e.target.checked as any)
+                  }
+                />
+                Afficher sur écran Display
+              </label>
+            </div>
+
             <div className="flex items-center gap-2">
               <button className="btn" onClick={() => setOpenMasks(true)}>
                 Gérer les images
               </button>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (!f) return
-                  const name = prompt("Nom de l'image ?") || f.name
-                  uploadMask.mutate({ file: f, name })
-                  e.currentTarget.value = ""
-                }}
-              />
+            </div>
+
+            <div className="border-t border-white/10 pt-3 space-y-2">
+              <div className="display-title text-base">Cibles (joueurs)</div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {(players ?? []).map((p) => {
+                  const selected = (app?.mask_target_player_ids ?? []).includes(
+                    p.id
+                  )
+                  return (
+                    <label key={p.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={(e) => {
+                          const prev = (app?.mask_target_player_ids ??
+                            []) as string[]
+                          const next = e.target.checked
+                            ? Array.from(new Set([...prev, p.id]))
+                            : prev.filter((id) => id !== p.id)
+                          updateTargets.mutate(next as any)
+                        }}
+                      />
+                      {p.first_name} {p.last_name}
+                    </label>
+                  )
+                })}
+              </div>
             </div>
           </section>
           <section className="space-y-6">
@@ -180,62 +240,261 @@ export default function Dashboard() {
       <Modal
         open={openMasks}
         onClose={() => setOpenMasks(false)}
-        title="Images masque (B/N)"
+        title="Images (arborescence)"
+        maxWClass="max-w-6xl"
       >
         <div className="space-y-3">
+          {(() => {
+            const folders = new Set<string>()
+            folders.add("/")
+            const addParents = (p: string) => {
+              const segs = p.split("/").filter(Boolean)
+              let acc: string[] = []
+              for (const s of segs) {
+                acc.push(s)
+                folders.add("/" + acc.join("/"))
+              }
+            }
+            for (const m of masks ?? []) {
+              const sp = (m.storage_path || "").split("/").filter(Boolean)
+              if (sp.length > 1) {
+                const folder = "/" + sp.slice(0, -1).join("/")
+                addParents(folder)
+              }
+            }
+            const sortedFolders = Array.from(folders).sort((a, b) =>
+              a.localeCompare(b)
+            )
+            return (
+              <div className="card-surface p-3">
+                <div className="text-sm mb-2">Téléverser une image</div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
+                  <select
+                    className="bg-white/10 border border-white/10 rounded px-2 py-2"
+                    value={selectedFolder}
+                    onChange={(e) => setSelectedFolder(e.target.value)}
+                  >
+                    {sortedFolders.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className="bg-white/10 border border-white/10 rounded px-2 py-2"
+                    placeholder="Ou nouveau dossier (ex: /donjon/salle1)"
+                    value={customFolder}
+                    onChange={(e) => setCustomFolder(e.target.value)}
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null
+                      setUploadFile(f)
+                      setUploadName(f ? f.name : "")
+                    }}
+                  />
+                  <input
+                    className="bg-white/10 border border-white/10 rounded px-2 py-2"
+                    placeholder="Nom de l'image"
+                    value={uploadName}
+                    onChange={(e) => setUploadName(e.target.value)}
+                  />
+                </div>
+                <div className="mt-2">
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      if (!uploadFile || !uploadName) return
+                      const folderPath = (
+                        customFolder ||
+                        selectedFolder ||
+                        "/"
+                      ).trim()
+                      const normalized =
+                        folderPath === "/"
+                          ? undefined
+                          : folderPath.replace(/^\/+/, "")
+                      uploadMask.mutate({
+                        file: uploadFile,
+                        name: uploadName,
+                        folder: normalized,
+                      })
+                      setUploadFile(null)
+                      setUploadName("")
+                    }}
+                  >
+                    Téléverser
+                  </button>
+                </div>
+              </div>
+            )
+          })()}
           <input
             value={maskQuery}
             onChange={(e) => setMaskQuery(e.target.value)}
             placeholder="Rechercher..."
             className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none"
           />
-          <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-auto pr-1">
-            {(masks ?? [])
-              .filter((m) =>
-                maskQuery.trim()
-                  ? m.name.toLowerCase().includes(maskQuery.toLowerCase())
+          <div className="max-h-[70vh] overflow-auto pr-1">
+            {(() => {
+              const list = (masks ?? []).filter((m) => {
+                const matchQ = maskQuery.trim()
+                  ? (m.name || "")
+                      .toLowerCase()
+                      .includes(maskQuery.toLowerCase()) ||
+                    (m.storage_path || "")
+                      .toLowerCase()
+                      .includes(maskQuery.toLowerCase())
                   : true
-              )
-              .map((m) => (
-                <div
-                  key={m.id}
-                  className="p-2 rounded bg-white/5 flex items-center gap-3"
-                >
-                  <img
-                    src={m.url}
-                    className="w-16 h-16 object-contain bg-black"
-                    alt={m.name}
-                  />
-                  <div className="flex-1">
-                    <div className="text-sm">{m.name}</div>
-                    <div className="muted text-xs">
-                      {m.width}×{m.height}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {activeMaskId === m.id ? (
-                      <button className="btn" onClick={() => deactivate()}>
-                        Désactiver
-                      </button>
-                    ) : (
-                      <button className="btn" onClick={() => activate(m.id)}>
-                        Activer
-                      </button>
+                return matchQ
+              })
+              const tree: Record<string, MaskNode> = {}
+              for (const m of list) {
+                const path = (m.storage_path || m.name || "")
+                  .split("/")
+                  .filter(Boolean)
+                let cursor = tree
+                for (let i = 0; i < path.length - 1; i++) {
+                  const seg = String(path[i])
+                  cursor[seg] = cursor[seg] || { _type: "dir", children: {} }
+                  cursor = (cursor[seg] as any).children
+                }
+                const leaf = String(path[path.length - 1] || m.name)
+                cursor[leaf] = { _type: "file", item: m }
+              }
+              const CollapsibleTree: React.FC<{
+                node: Record<string, MaskNode>
+                base?: string[]
+              }> = ({ node, base = [] }) => {
+                const [openDirs, setOpenDirs] = React.useState<
+                  Record<string, boolean>
+                >({})
+                const toggle = (path: string) =>
+                  setOpenDirs((s) => ({ ...s, [path]: !s[path] }))
+                const entries = Object.entries(node).sort((a, b) =>
+                  a[0].localeCompare(b[0])
+                )
+                const dirs = entries.filter(([, n]) => n._type === "dir")
+                const files = entries.filter(([, n]) => n._type === "file")
+                return (
+                  <div className="pl-2">
+                    {files.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-3">
+                        {files.map(([name, n]) => {
+                          const m = (n as any).item
+                          return (
+                            <div
+                              key={m.id}
+                              className="p-2 rounded bg-white/5 flex flex-col gap-2"
+                            >
+                              <img
+                                src={m.url}
+                                className="w-full h-28 object-contain bg-black"
+                                alt={m.name}
+                              />
+                              <div className="text-sm truncate" title={m.name}>
+                                {m.name}
+                              </div>
+                              <div
+                                className="muted text-xs truncate"
+                                title={m.storage_path || ""}
+                              >
+                                {m.storage_path || ""}
+                              </div>
+                              <div className="muted text-xs">
+                                {m.width}×{m.height}
+                              </div>
+                              <div className="text-xs flex items-center gap-2 mt-1">
+                                <span>Rotation</span>
+                                <button
+                                  className="btn btn-ghost px-2"
+                                  onClick={() => {
+                                    const q =
+                                      ((m.rotation_quarters ?? 0) + 3) % 4
+                                    setRotationQuarters.mutate({
+                                      id: m.id,
+                                      rotation_quarters: q,
+                                    })
+                                  }}
+                                  title="Tourner -90°"
+                                >
+                                  ⟲
+                                </button>
+                                <button
+                                  className="btn btn-ghost px-2"
+                                  onClick={() => {
+                                    const q =
+                                      ((m.rotation_quarters ?? 0) + 1) % 4
+                                    setRotationQuarters.mutate({
+                                      id: m.id,
+                                      rotation_quarters: q,
+                                    })
+                                  }}
+                                  title="Tourner +90°"
+                                >
+                                  ⟳
+                                </button>
+                                <span className="muted">
+                                  {((m.rotation_quarters ?? 0) * 90) % 360}°
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                {activeMaskId === m.id ? (
+                                  <button
+                                    className="btn"
+                                    onClick={() => deactivate()}
+                                  >
+                                    Désactiver
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="btn"
+                                    onClick={() => activate(m.id)}
+                                  >
+                                    Activer
+                                  </button>
+                                )}
+                                <button
+                                  className="btn bg-red-600 hover:bg-red-700"
+                                  onClick={() =>
+                                    deleteMask.mutate({ id: m.id, url: m.url })
+                                  }
+                                >
+                                  Supprimer
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
                     )}
-                    <button
-                      className="btn bg-red-600 hover:bg-red-700"
-                      onClick={() =>
-                        deleteMask.mutate({ id: m.id, url: m.url })
-                      }
-                    >
-                      Supprimer
-                    </button>
+                    {dirs.map(([name, n]) => {
+                      const pathKey = [...base, name].join("/")
+                      const isOpen = openDirs[pathKey] ?? true
+                      return (
+                        <div key={name} className="mb-2">
+                          <button
+                            className="text-xs muted hover:text-white transition-colors"
+                            onClick={() => toggle(pathKey)}
+                          >
+                            {isOpen ? "▾" : "▸"} /{pathKey}
+                          </button>
+                          {isOpen && (
+                            <CollapsibleTree
+                              node={(n as any).children}
+                              base={[...base, name]}
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                </div>
-              ))}
-            {(!masks || masks.length === 0) && (
-              <div className="muted text-sm">Aucune image téléchargée</div>
-            )}
+                )
+              }
+              return <CollapsibleTree node={tree} />
+            })()}
           </div>
         </div>
       </Modal>
