@@ -329,8 +329,8 @@ export default function Display() {
                     {player.is_dead && (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="relative w-full h-full p-8">
-                          <div className="absolute top-1/2 left-1/2 w-full h-1.5 bg-red-500 transform -translate-x-1/2 -translate-y-1/2 rotate-45 origin-center animate-[drawLine1_1.5s_ease-out_forwards] scale-x-0 rounded"></div>
-                          <div className="absolute top-1/2 left-1/2 w-full h-1.5 bg-red-500 transform -translate-x-1/2 -translate-y-1/2 -rotate-45 origin-center animate-[drawLine2_1.5s_ease-out_1.5s_forwards] scale-x-0 rounded"></div>
+                          <div className="absolute top-1/2 left-1/2 w-full h-2 bg-white transform -translate-x-1/2 -translate-y-1/2 rotate-45 origin-center animate-[drawLine1_1.5s_ease-out_forwards] scale-x-0 rounded shadow-glow"></div>
+                          <div className="absolute top-1/2 left-1/2 w-full h-2 bg-white transform -translate-x-1/2 -translate-y-1/2 -rotate-45 origin-center animate-[drawLine2_1.5s_ease-out_1.5s_forwards] scale-x-0 rounded shadow-glow"></div>
                         </div>
                       </div>
                     )}
