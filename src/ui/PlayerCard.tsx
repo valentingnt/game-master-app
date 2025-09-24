@@ -3,6 +3,7 @@ import {
   useUpdatePlayerField,
   useUploadPlayerAvatar,
   useClearPlayerAvatar,
+  usePlayerInventory,
 } from "../lib/hooks"
 import { supabase } from "../lib/supabaseClient"
 import { useToast } from "./Toast"
@@ -14,6 +15,8 @@ export default function PlayerCard({ player: p }: Props) {
   const { show } = useToast()
   const upload = useUploadPlayerAvatar()
   const clearAvatar = useClearPlayerAvatar()
+  const { data: playerInventory, isLoading: inventoryLoading } =
+    usePlayerInventory(p.id)
 
   const normalizeAvatarUrl = (url: string | null | undefined): string => {
     const raw = (url ?? "").trim()
@@ -650,6 +653,42 @@ export default function PlayerCard({ player: p }: Props) {
             />
           </div>
         </div>
+      </div>
+
+      {/* Player inventory list */}
+      <div className="mt-4">
+        <div className="text-white text-sm mb-2">Inventaire personnel</div>
+        {inventoryLoading ? (
+          <div className="text-white/60 text-sm">Chargement...</div>
+        ) : playerInventory && playerInventory.length > 0 ? (
+          <div className="bg-white/10 border border-white/10 rounded p-3">
+            <div className="space-y-1">
+              {playerInventory.map((item, index) => (
+                <div
+                  key={item.id}
+                  className={`flex items-center justify-between px-3 py-2 ${
+                    index % 2 === 0 ? "bg-white/5" : "bg-white/10"
+                  }`}
+                >
+                  <div className="flex-1">
+                    <span className="text-white text-sm">{item.item_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/80 text-sm">
+                      Quantité: {item.quantity}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white/10 border border-white/10 rounded p-3">
+            <div className="text-white/60 text-sm">
+              Aucun objet dans l'inventaire
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-4">
