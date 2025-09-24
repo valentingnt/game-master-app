@@ -36,7 +36,6 @@ import {
 import { MdOutlineFastfood } from "react-icons/md"
 import { RxHeight } from "react-icons/rx"
 import { LuWeight } from "react-icons/lu"
-import { GoTrueClient } from "@supabase/supabase-js"
 
 export default function Player() {
   const params = useParams()

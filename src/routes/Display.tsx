@@ -5,6 +5,7 @@ import {
   useActiveMaskImage,
   useMaskPointer,
   useUpdateMaskPointer,
+  usePlayers,
 } from "../lib/hooks"
 import { useEffect, useRef, useState } from "react"
 
@@ -13,6 +14,7 @@ export default function Display() {
   const { data: inv } = useInventory()
   const { data: activeMask } = useActiveMaskImage()
   const { data: pointer } = useMaskPointer()
+  const { data: players } = usePlayers()
   const smoothRef = useRef<{ x: number; y: number } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null)
@@ -301,6 +303,28 @@ export default function Display() {
               text={app?.led_small_bottom ?? ""}
               variant="bottom"
             />
+          </div>
+        </section>
+
+        {/* Player Images Section */}
+        <section className="py-4">
+          <div className="flex justify-between w-full max-h-64 gap-4">
+            {(players ?? [])
+              .filter((player) => player.avatar_url)
+              .map((player) => (
+                <div
+                  key={player.id}
+                  className="flex flex-col items-center justify-between space-y-2 flex-1"
+                >
+                  <img
+                    src={player.avatar_url ?? ""}
+                    alt={`${player.first_name} ${player.last_name}`}
+                    className={`w-full h-full object-contain rounded ${
+                      player.is_dead ? "grayscale" : ""
+                    }`}
+                  />
+                </div>
+              ))}
           </div>
         </section>
 
