@@ -316,13 +316,25 @@ export default function Display() {
                   key={player.id}
                   className="flex flex-col items-center justify-between space-y-2 flex-1"
                 >
-                  <img
-                    src={player.avatar_url ?? ""}
-                    alt={`${player.first_name} ${player.last_name}`}
-                    className={`w-full h-full object-contain rounded ${
-                      player.is_dead ? "grayscale" : ""
-                    }`}
-                  />
+                  <div className="relative w-full h-full">
+                    <img
+                      src={player.avatar_url ?? ""}
+                      alt={`${player.first_name} ${player.last_name}`}
+                      className={`w-full h-full object-contain rounded transition-all duration-1000 ${
+                        player.is_dead
+                          ? "grayscale animate-[fadeToGrayscale_1s_ease-out_forwards]"
+                          : ""
+                      }`}
+                    />
+                    {player.is_dead && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="relative w-16 h-16">
+                          <div className="absolute top-1/2 left-1/2 w-full h-1 bg-red-500 transform -translate-x-1/2 -translate-y-1/2 rotate-45 origin-center animate-[drawLine1_1.5s_ease-out_forwards] scale-x-0"></div>
+                          <div className="absolute top-1/2 left-1/2 w-full h-1 bg-red-500 transform -translate-x-1/2 -translate-y-1/2 -rotate-45 origin-center animate-[drawLine2_1.5s_ease-out_1.5s_forwards] scale-x-0"></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
           </div>

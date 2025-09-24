@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes drawLine1 {
+  from {
+    transform: translateX(-50%) translateY(-50%) rotate(45deg) scaleX(0);
+  }
+  to {
+    transform: translateX(-50%) translateY(-50%) rotate(45deg) scaleX(1);
+  }
+}
+
+@keyframes drawLine2 {
+  from {
+    transform: translateX(-50%) translateY(-50%) rotate(-45deg) scaleX(0);
+  }
+  to {
+    transform: translateX(-50%) translateY(-50%) rotate(-45deg) scaleX(1);
+  }
+}
+
+@keyframes fadeToGrayscale {
+  from {
+    filter: grayscale(0%);
+  }
+  to {
+    filter: grayscale(100%);
+  }
+}
+
 :root {
   color-scheme: dark light;
 }
