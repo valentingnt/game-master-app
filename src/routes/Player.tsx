@@ -226,7 +226,7 @@ export default function Player() {
                           <div className="text-xs uppercase tracking-wider muted mb-2">
                             Statistiques
                           </div>
-                          <div className="w-full h-full">
+                          <div className="w-full h-full min-h-[300px] sm:min-h-[250px]">
                             <ResponsiveContainer width="100%" height="100%">
                               <RadarChart
                                 data={radarData}
@@ -390,6 +390,36 @@ export default function Player() {
             )}
           </section>
 
+          {/* Inventory section - visible on mobile, hidden on lg+ */}
+          {personalInv && personalInv.length > 0 && (
+            <section className="card-surface p-5 lg:hidden">
+              <div className="display-title text-lg mb-2">
+                Inventaire du personnage
+              </div>
+              {!player ? (
+                <div className="text-sm text-gray-400">Joueur non trouvé.</div>
+              ) : (
+                <div className="space-y-2">
+                  {personalInv && personalInv.length > 0 ? (
+                    <ul className="space-y-2">
+                      {personalInv.map((it) => (
+                        <li
+                          key={it.id}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <div className="truncate">{it.item_name}</div>
+                          <div className="text-right w-14">x{it.quantity}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-sm text-gray-400">Aucun objet</div>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
           {player && (
             <section className="card-surface p-5">
               <div className="muted text-sm mb-2">
@@ -441,8 +471,9 @@ export default function Player() {
           )}
         </div>
 
+        {/* Inventory sidebar - only visible on lg+ screens */}
         {personalInv && personalInv.length > 0 ? (
-          <div className="lg:col-span-1 lg:sticky lg:top-20">
+          <div className="hidden lg:block lg:col-span-1 lg:sticky lg:top-20">
             <section className="card-surface p-5">
               <div className="display-title text-lg mb-2">
                 Inventaire du personnage
