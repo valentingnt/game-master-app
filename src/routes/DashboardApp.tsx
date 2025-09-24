@@ -1,10 +1,13 @@
 import { Outlet } from "react-router-dom"
 import { useEffect, useState } from "react"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 export default function DashboardApp() {
   const [authed, setAuthed] = useState(false)
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+
+  useDocumentTitle("Dashboard")
   const required =
     (import.meta.env.VITE_GM_PASSWORD as string) ||
     (import.meta.env.REACT_APP_GM_PASSWORD as string)

@@ -1,9 +1,12 @@
 import { NavLink, Outlet } from "react-router-dom"
 import { useShop } from "../lib/hooks"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 export default function PlayerApp() {
   const { data: shop1Data } = useShop("shop1")
   const { data: shop2Data } = useShop("shop2")
+
+  useDocumentTitle("Terminal")
 
   return (
     <div className="min-h-screen app-surface bg-grid">

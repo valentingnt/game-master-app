@@ -8,6 +8,7 @@ import {
   usePlayers,
 } from "../lib/hooks"
 import { useEffect, useRef, useState } from "react"
+import { useDocumentTitle } from "../lib/useDocumentTitle"
 
 export default function Display() {
   const { data: app } = useAppState()
@@ -15,6 +16,9 @@ export default function Display() {
   const { data: activeMask } = useActiveMaskImage()
   const { data: pointer } = useMaskPointer()
   const { data: players } = usePlayers()
+
+  useDocumentTitle("Display")
+
   const smoothRef = useRef<{ x: number; y: number } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null)
