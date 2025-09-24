@@ -570,6 +570,138 @@ export default function PlayerCard({ player: p }: Props) {
           ))}
         </div>
       </div>
+
+      <div className="mt-4">
+        <div className="text-white text-sm mb-2">Informations personnelles</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="bg-white/10 border border-white/10 rounded p-2">
+            <div className="text-white mb-1">Âge</div>
+            <input
+              className="w-full bg-ink-900 rounded px-2 py-1 text-xs sm:text-sm"
+              value={p.age ?? ""}
+              onChange={(e) =>
+                update.mutate({
+                  id: p.id,
+                  field: "age",
+                  value: e.target.value,
+                })
+              }
+              placeholder="Ex: 25 ans"
+            />
+          </div>
+          <div className="bg-white/10 border border-white/10 rounded p-2">
+            <div className="text-white mb-1">Taille</div>
+            <input
+              className="w-full bg-ink-900 rounded px-2 py-1 text-xs sm:text-sm"
+              value={p.size ?? ""}
+              onChange={(e) =>
+                update.mutate({
+                  id: p.id,
+                  field: "size",
+                  value: e.target.value,
+                })
+              }
+              placeholder="Ex: 1m75"
+            />
+          </div>
+          <div className="bg-white/10 border border-white/10 rounded p-2">
+            <div className="text-white mb-1">Poids</div>
+            <input
+              className="w-full bg-ink-900 rounded px-2 py-1 text-xs sm:text-sm"
+              value={p.weight ?? ""}
+              onChange={(e) =>
+                update.mutate({
+                  id: p.id,
+                  field: "weight",
+                  value: e.target.value,
+                })
+              }
+              placeholder="Ex: 70kg"
+            />
+          </div>
+          <div className="bg-white/10 border border-white/10 rounded p-2">
+            <div className="text-white mb-1">Sexe</div>
+            <input
+              className="w-full bg-ink-900 rounded px-2 py-1 text-xs sm:text-sm"
+              value={p.sex ?? ""}
+              onChange={(e) =>
+                update.mutate({
+                  id: p.id,
+                  field: "sex",
+                  value: e.target.value,
+                })
+              }
+              placeholder="Ex: Masculin"
+            />
+          </div>
+          <div className="bg-white/10 border border-white/10 rounded p-2">
+            <div className="text-white mb-1">Signe astrologique</div>
+            <input
+              className="w-full bg-ink-900 rounded px-2 py-1 text-xs sm:text-sm"
+              value={p.astrological_sign ?? ""}
+              onChange={(e) =>
+                update.mutate({
+                  id: p.id,
+                  field: "astrological_sign",
+                  value: e.target.value,
+                })
+              }
+              placeholder="Ex: Lion"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="text-white text-sm mb-2">Description physique</div>
+        <textarea
+          className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
+          rows={3}
+          value={p.physical_description ?? ""}
+          onChange={(e) =>
+            update.mutate({
+              id: p.id,
+              field: "physical_description",
+              value: e.target.value,
+            })
+          }
+          placeholder="Description physique du personnage..."
+        />
+      </div>
+
+      <div className="mt-4">
+        <div className="text-white text-sm mb-2">Traits de caractère</div>
+        <textarea
+          className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
+          rows={3}
+          value={p.character_traits ?? ""}
+          onChange={(e) =>
+            update.mutate({
+              id: p.id,
+              field: "character_traits",
+              value: e.target.value,
+            })
+          }
+          placeholder="Traits de caractère du personnage..."
+        />
+      </div>
+
+      <div className="mt-4">
+        <div className="text-white text-sm mb-2">Histoire</div>
+        <textarea
+          className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
+          rows={4}
+          value={p.history ?? ""}
+          onChange={(e) =>
+            update.mutate({
+              id: p.id,
+              field: "history",
+              value: e.target.value,
+            })
+          }
+          placeholder="Histoire et background du personnage..."
+        />
+      </div>
     </div>
   )
 }
