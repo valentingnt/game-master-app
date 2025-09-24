@@ -358,7 +358,7 @@ export default function PlayerCard({ player: p }: Props) {
                 })
               }
             />
-            <span className="text-xs text-white">/ 2</span>
+            <span className="text-xs text-white">/ 3</span>
           </div>
           <div className="mt-2 flex items-center gap-2">
             <button

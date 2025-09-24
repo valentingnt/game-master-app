@@ -57,7 +57,7 @@ async function advanceDayOnServer() {
   if (pErr) throw pErr
   const updates = (players ?? []).map((pl: any) => ({
     id: pl.id,
-    action_points: 2,
+    action_points: 3,
     hunger: Math.max(-2, (pl.hunger ?? 0) - 1),
     thirst: Math.max(-2, (pl.thirst ?? 0) - 1),
   }))

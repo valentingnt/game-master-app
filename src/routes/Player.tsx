@@ -300,7 +300,7 @@ export default function Player() {
                                   className="progress-fill"
                                   style={{
                                     width: `${
-                                      (Math.max(0, player.action_points) / 2) *
+                                      (Math.max(0, player.action_points) / 3) *
                                       100
                                     }%`,
                                   }}
@@ -308,7 +308,7 @@ export default function Player() {
                               </div>
                             </div>
                             <div className="text-xs mt-1">
-                              {player.action_points} / 2
+                              {player.action_points} / 3
                             </div>
                           </div>
                           <div className="card-surface p-3">

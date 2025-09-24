@@ -1,6 +1,10 @@
-import { Link, NavLink, Outlet } from "react-router-dom"
+import { NavLink, Outlet } from "react-router-dom"
+import { useShop } from "../lib/hooks"
 
 export default function PlayerApp() {
+  const { data: shop1Data } = useShop("shop1")
+  const { data: shop2Data } = useShop("shop2")
+
   return (
     <div className="min-h-screen app-surface bg-grid">
       <header className="sticky top-0 z-40 border-b border-ink-800 bg-ink-950/80 backdrop-blur">
@@ -24,26 +28,30 @@ export default function PlayerApp() {
             >
               Joueur
             </NavLink>
-            <NavLink
-              to="/player/shop1"
-              className={({ isActive }) =>
-                `btn btn-shine ${
-                  isActive ? "btn-primary" : "btn-ghost text-gray-300"
-                }`
-              }
-            >
-              Boutique 1
-            </NavLink>
-            <NavLink
-              to="/player/shop2"
-              className={({ isActive }) =>
-                `btn btn-shine ${
-                  isActive ? "btn-primary" : "btn-ghost text-gray-300"
-                }`
-              }
-            >
-              Boutique 2
-            </NavLink>
+            {shop1Data?.shop?.unlocked && (
+              <NavLink
+                to="/player/shop1"
+                className={({ isActive }) =>
+                  `btn btn-shine ${
+                    isActive ? "btn-primary" : "btn-ghost text-gray-300"
+                  }`
+                }
+              >
+                Boutique 1
+              </NavLink>
+            )}
+            {shop2Data?.shop?.unlocked && (
+              <NavLink
+                to="/player/shop2"
+                className={({ isActive }) =>
+                  `btn btn-shine ${
+                    isActive ? "btn-primary" : "btn-ghost text-gray-300"
+                  }`
+                }
+              >
+                Boutique 2
+              </NavLink>
+            )}
           </nav>
         </div>
       </header>
