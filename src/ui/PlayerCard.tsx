@@ -694,7 +694,7 @@ export default function PlayerCard({ player: p }: Props) {
       <div className="mt-4">
         <div className="text-white text-sm mb-2">Description physique</div>
         <textarea
-          className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
+          className="w-full max-h-16 bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
           rows={3}
           value={p.physical_description ?? ""}
           onChange={(e) =>
@@ -711,7 +711,7 @@ export default function PlayerCard({ player: p }: Props) {
       <div className="mt-4">
         <div className="text-white text-sm mb-2">Traits de caractère</div>
         <textarea
-          className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
+          className="w-full max-h-16 bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
           rows={3}
           value={p.character_traits ?? ""}
           onChange={(e) =>
@@ -728,7 +728,7 @@ export default function PlayerCard({ player: p }: Props) {
       <div className="mt-4">
         <div className="text-white text-sm mb-2">Histoire</div>
         <textarea
-          className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
+          className="w-full max-h-16 bg-white/10 border border-white/10 rounded px-3 py-2 outline-none resize-none"
           rows={4}
           value={p.history ?? ""}
           onChange={(e) =>
