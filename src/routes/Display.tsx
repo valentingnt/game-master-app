@@ -351,7 +351,7 @@ export default function Display() {
           </div>
 
           <div className="lg:col-span-2 card-surface p-4">
-            <div className="display-title text-2xl mb-3">Inventaire</div>
+            <div className="display-title text-2xl mb-3">Stockage</div>
             <ul className="space-y-2">
               {(inv ?? []).map((it, index) => (
                 <li

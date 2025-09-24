@@ -68,98 +68,125 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
         </div>
         {items.map((it) => (
           <div key={it.id} className="flex flex-wrap gap-2 items-center">
-            <input
-              className="bg-white/10 border border-white/10 rounded px-2 py-1 min-w-[180px] flex-1"
-              value={drafts[it.id]?.name ?? it.name}
-              onChange={(e) =>
-                setDrafts((d) => ({
-                  ...d,
-                  [it.id]: {
-                    ...(d[it.id] ?? {
-                      name: it.name,
-                      price: it.price,
-                      bundle_quantity: it.bundle_quantity,
-                    }),
-                    name: e.target.value,
-                  },
-                }))
-              }
-              onBlur={() => {
-                if (!shopId) return
-                const d = drafts[it.id]
-                if (!d) return
-                upsert.mutate({
-                  id: it.id,
-                  shop_id: shopId,
-                  name: d.name,
-                  price: d.price,
-                  bundle_quantity: d.bundle_quantity,
-                  disabled: it.disabled ?? false,
-                })
-              }}
-            />
-            <input
-              type="number"
-              className="bg-white/10 border border-white/10 rounded px-2 py-1 w-24"
-              value={drafts[it.id]?.price ?? it.price}
-              onChange={(e) =>
-                setDrafts((d) => ({
-                  ...d,
-                  [it.id]: {
-                    ...(d[it.id] ?? {
-                      name: it.name,
-                      price: it.price,
-                      bundle_quantity: it.bundle_quantity,
-                    }),
-                    price: Number(e.target.value || 0),
-                  },
-                }))
-              }
-              onBlur={() => {
-                if (!shopId) return
-                const d = drafts[it.id]
-                if (!d) return
-                upsert.mutate({
-                  id: it.id,
-                  shop_id: shopId,
-                  name: d.name,
-                  price: d.price,
-                  bundle_quantity: d.bundle_quantity,
-                  disabled: it.disabled ?? false,
-                })
-              }}
-            />
-            <input
-              type="number"
-              className="bg-white/10 border border-white/10 rounded px-2 py-1 w-24"
-              value={drafts[it.id]?.bundle_quantity ?? it.bundle_quantity}
-              onChange={(e) =>
-                setDrafts((d) => ({
-                  ...d,
-                  [it.id]: {
-                    ...(d[it.id] ?? {
-                      name: it.name,
-                      price: it.price,
-                      bundle_quantity: it.bundle_quantity,
-                    }),
-                    bundle_quantity: Number(e.target.value || 1),
-                  },
-                }))
-              }
-              onBlur={() => {
-                if (!shopId) return
-                const d = drafts[it.id]
-                if (!d) return
-                upsert.mutate({
-                  id: it.id,
-                  shop_id: shopId,
-                  name: d.name,
-                  price: d.price,
-                  bundle_quantity: d.bundle_quantity,
-                  disabled: it.disabled ?? false,
-                })
-              }}
-            />
+            <div className="flex-1 min-w-[180px]">
+              <label
+                htmlFor={`name-${it.id}`}
+                className="block text-xs text-gray-300 mb-1"
+              >
+                Nom
+              </label>
+              <input
+                id={`name-${it.id}`}
+                className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
+                value={drafts[it.id]?.name ?? it.name}
+                onChange={(e) =>
+                  setDrafts((d) => ({
+                    ...d,
+                    [it.id]: {
+                      ...(d[it.id] ?? {
+                        name: it.name,
+                        price: it.price,
+                        bundle_quantity: it.bundle_quantity,
+                      }),
+                      name: e.target.value,
+                    },
+                  }))
+                }
+                onBlur={() => {
+                  if (!shopId) return
+                  const d = drafts[it.id]
+                  if (!d) return
+                  upsert.mutate({
+                    id: it.id,
+                    shop_id: shopId,
+                    name: d.name,
+                    price: d.price,
+                    bundle_quantity: d.bundle_quantity,
+                    disabled: it.disabled ?? false,
+                  })
+                }}
+              />
+            </div>
+            <div className="w-24">
+              <label
+                htmlFor={`price-${it.id}`}
+                className="block text-xs text-gray-300 mb-1"
+              >
+                Prix
+              </label>
+              <input
+                id={`price-${it.id}`}
+                type="number"
+                className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
+                value={drafts[it.id]?.price ?? it.price}
+                onChange={(e) =>
+                  setDrafts((d) => ({
+                    ...d,
+                    [it.id]: {
+                      ...(d[it.id] ?? {
+                        name: it.name,
+                        price: it.price,
+                        bundle_quantity: it.bundle_quantity,
+                      }),
+                      price: Number(e.target.value || 0),
+                    },
+                  }))
+                }
+                onBlur={() => {
+                  if (!shopId) return
+                  const d = drafts[it.id]
+                  if (!d) return
+                  upsert.mutate({
+                    id: it.id,
+                    shop_id: shopId,
+                    name: d.name,
+                    price: d.price,
+                    bundle_quantity: d.bundle_quantity,
+                    disabled: it.disabled ?? false,
+                  })
+                }}
+              />
+            </div>
+            <div className="w-24">
+              <label
+                htmlFor={`bundle-${it.id}`}
+                className="block text-xs text-gray-300 mb-1"
+              >
+                Quantité
+              </label>
+              <input
+                id={`bundle-${it.id}`}
+                type="number"
+                className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
+                value={drafts[it.id]?.bundle_quantity ?? it.bundle_quantity}
+                onChange={(e) =>
+                  setDrafts((d) => ({
+                    ...d,
+                    [it.id]: {
+                      ...(d[it.id] ?? {
+                        name: it.name,
+                        price: it.price,
+                        bundle_quantity: it.bundle_quantity,
+                      }),
+                      bundle_quantity: Number(e.target.value || 1),
+                    },
+                  }))
+                }
+                onBlur={() => {
+                  if (!shopId) return
+                  const d = drafts[it.id]
+                  if (!d) return
+                  upsert.mutate({
+                    id: it.id,
+                    shop_id: shopId,
+                    name: d.name,
+                    price: d.price,
+                    bundle_quantity: d.bundle_quantity,
+                    disabled: it.disabled ?? false,
+                  })
+                }}
+              />
+            </div>
             <label className="flex items-center gap-2 text-sm text-gray-100">
               <input
                 type="checkbox"
@@ -206,27 +233,54 @@ export default function ShopItemsModal({ shopSlug, open, onClose }: Props) {
         <div className="text-xs uppercase tracking-wider muted mb-2">
           Ajouter un item
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          <input
-            className="bg-white/10 border border-white/10 rounded px-2 py-1 min-w-[180px] flex-1"
-            placeholder="Nom"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            type="number"
-            className="bg-white/10 border border-white/10 rounded px-2 py-1 w-24"
-            placeholder="Prix"
-            value={price}
-            onChange={(e) => setPrice(Number(e.target.value || 0))}
-          />
-          <input
-            type="number"
-            className="bg-white/10 border border-white/10 rounded px-2 py-1 w-24"
-            placeholder="Bundle (quantité)"
-            value={bundle}
-            onChange={(e) => setBundle(Number(e.target.value || 1))}
-          />
+        <div className="flex flex-wrap gap-2 items-end">
+          <div className="flex-1 min-w-[180px]">
+            <label
+              htmlFor="new-item-name"
+              className="block text-xs text-gray-300 mb-1"
+            >
+              Nom
+            </label>
+            <input
+              id="new-item-name"
+              className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
+              placeholder="Nom de l'item"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="w-24">
+            <label
+              htmlFor="new-item-price"
+              className="block text-xs text-gray-300 mb-1"
+            >
+              Prix
+            </label>
+            <input
+              id="new-item-price"
+              type="number"
+              className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
+              placeholder="Prix"
+              value={price}
+              onChange={(e) => setPrice(Number(e.target.value || 0))}
+            />
+          </div>
+          <div className="w-24">
+            <label
+              htmlFor="new-item-bundle"
+              className="block text-xs text-gray-300 mb-1"
+            >
+              Quantité
+            </label>
+            <input
+              id="new-item-bundle"
+              type="number"
+              className="bg-white/10 border border-white/10 rounded px-2 py-1 w-full"
+              placeholder="Quantité"
+              value={bundle}
+              onChange={(e) => setBundle(Number(e.target.value || 1))}
+            />
+          </div>
           <button
             className="btn btn-primary"
             onClick={() => {

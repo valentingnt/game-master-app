@@ -270,7 +270,7 @@ export default function Dashboard() {
                     {/* Common -> Player */}
                     <div className="bg-white/5 rounded p-3 border border-white/10">
                       <div className="text-xs uppercase tracking-wider muted mb-2">
-                        Commun → Joueur
+                        Stockage → Inventaire
                       </div>
                       <div className="space-y-2">
                         <select
@@ -360,7 +360,7 @@ export default function Dashboard() {
                     {/* Player -> Common */}
                     <div className="bg-white/5 rounded p-3 border border-white/10">
                       <div className="text-xs uppercase tracking-wider muted mb-2">
-                        Joueur → Commun
+                        Inventaire → Stockage
                       </div>
                       <div className="space-y-2">
                         <select
