@@ -35,7 +35,7 @@ export default function Shop({ shopId }: Props) {
         onSuccess: () =>
           show({
             type: "success",
-            message: `Achaté: ${bundle > 1 ? `${bundle}x ` : ""}${name}`,
+            message: `Acheté: ${bundle > 1 ? `${bundle}x ` : ""}${name}`,
           }),
         onError: (e) =>
           show({
